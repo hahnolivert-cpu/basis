@@ -1,0 +1,165 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
+import { T, mono, serif } from "@/lib/theme";
+import { usd, usdK } from "@/lib/format";
+import { fvCalc, reqMonthly, reqReturn } from "@/lib/calc";
+import { Card } from "@/components/ui";
+import { ChartTip } from "@/components/charts/ChartTip";
+
+const TARGETS = [3e6, 5e6, 10e6, 20e6];
+const YEARS = [2030, 2035, 2040, 2045, 2050];
+const monthsTo = (year: number) => (year - 2026) * 12 + 5; // Jul 2026 → Dec of year
+
+export function ScenarioTab({ startNW }: { startNW: number }) {
+  const [mode, setMode] = useState<"monthly" | "return">("monthly");
+  const [assumedReturn, setAssumedReturn] = useState(7);
+  const [assumedMonthly, setAssumedMonthly] = useState(5000);
+  const [planMonthly, setPlanMonthly] = useState(5000);
+  const [planReturn, setPlanReturn] = useState(7);
+
+  const projection = useMemo(() => {
+    const pts = [];
+    for (let y = 2026; y <= 2050; y++) {
+      pts.push({ m: String(y), v: Math.round(fvCalc(startNW, planMonthly, planReturn / 100, Math.max(0, monthsTo(y)))) });
+    }
+    return pts;
+  }, [startNW, planMonthly, planReturn]);
+
+  const inputStyle = { fontFamily: mono, fontSize: 14, padding: "8px 10px", border: `1px solid ${T.line}`, borderRadius: 8, width: 110, background: T.card, color: T.ink };
+  const th = { padding: "10px 12px", fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: T.inkSoft, textAlign: "right" as const, borderBottom: `1px solid ${T.line}` };
+  const td = { padding: "10px 12px", fontFamily: mono, fontSize: 13, textAlign: "right" as const, borderBottom: `1px solid ${T.line}` };
+
+  return (
+    <div>
+      {/* ---- Section 1: What it takes ---- */}
+      <Card style={{ marginTop: 22 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: serif, fontSize: 20, fontWeight: 600 }}>What it takes</div>
+            <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 3 }}>Starting from today&apos;s {usd(startNW)} net worth, monthly compounding.</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", border: `1px solid ${T.line}`, borderRadius: 8, overflow: "hidden" }}>
+              {(
+                [
+                  ["monthly", "Solve $/mo"],
+                  ["return", "Solve return"],
+                ] as [typeof mode, string][]
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setMode(id)}
+                  style={{
+                    border: "none", cursor: "pointer", padding: "8px 13px", fontFamily: "inherit", fontSize: 12.5, fontWeight: 500,
+                    background: mode === id ? T.ledger : T.card, color: mode === id ? "#fff" : T.inkSoft,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {mode === "monthly" ? (
+              <label style={{ fontSize: 12.5, color: T.inkSoft, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                at return <input type="number" value={assumedReturn} min={0} max={30} step={0.5} onChange={(e) => setAssumedReturn(+e.target.value)} style={{ ...inputStyle, width: 70 }} /> %/yr
+              </label>
+            ) : (
+              <label style={{ fontSize: 12.5, color: T.inkSoft, display: "inline-flex", alignItems: "center", gap: 7 }}>
+                investing $<input type="number" value={assumedMonthly} min={0} step={500} onChange={(e) => setAssumedMonthly(+e.target.value)} style={inputStyle} /> /mo
+              </label>
+            )}
+          </div>
+        </div>
+
+        <div style={{ overflowX: "auto", marginTop: 16 }}>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 640 }}>
+            <thead>
+              <tr>
+                <th style={{ ...th, textAlign: "left" }}>Target</th>
+                {YEARS.map((y) => <th key={y} style={th}>by {y}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {TARGETS.map((t) => (
+                <tr key={t}>
+                  <td style={{ ...td, textAlign: "left", fontWeight: 600, fontFamily: "inherit" }}>{usdK(t)}</td>
+                  {YEARS.map((y) => {
+                    const m = monthsTo(y);
+                    if (mode === "monthly") {
+                      const need = reqMonthly(t, startNW, assumedReturn / 100, m);
+                      return (
+                        <td key={y} style={td}>
+                          {need <= 0 ? <span style={{ color: T.gain }}>on track ✓</span> : need > 200000 ? <span style={{ color: T.loss }}>&gt;$200k/mo</span> : `${usd(need)}/mo`}
+                        </td>
+                      );
+                    }
+                    const r = reqReturn(t, startNW, assumedMonthly, m);
+                    return (
+                      <td key={y} style={td}>
+                        {r === null ? <span style={{ color: T.loss }}>&gt;60%/yr</span> : r === 0 ? <span style={{ color: T.gain }}>on track ✓</span> : `${(r * 100).toFixed(1)}%/yr`}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* ---- Section 2: Project my plan ---- */}
+      <Card style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: serif, fontSize: 20, fontWeight: 600 }}>Project my plan</div>
+            <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 3 }}>Enter your plan; see where it lands.</div>
+          </div>
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <label style={{ fontSize: 12.5, color: T.inkSoft, display: "inline-flex", alignItems: "center", gap: 7 }}>
+              $<input type="number" value={planMonthly} min={0} step={500} onChange={(e) => setPlanMonthly(+e.target.value)} style={inputStyle} /> /mo
+            </label>
+            <label style={{ fontSize: 12.5, color: T.inkSoft, display: "inline-flex", alignItems: "center", gap: 7 }}>
+              <input type="number" value={planReturn} min={-10} max={30} step={0.5} onChange={(e) => setPlanReturn(+e.target.value)} style={{ ...inputStyle, width: 70 }} /> %/yr
+            </label>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
+          {YEARS.map((y) => {
+            const v = fvCalc(startNW, planMonthly, planReturn / 100, monthsTo(y));
+            const hit = TARGETS.filter((t) => v >= t).pop();
+            return (
+              <div key={y} style={{ flex: 1, minWidth: 130, border: `1px solid ${T.line}`, borderRadius: 8, padding: "12px 14px", background: "#FAFCFA" }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.1em", color: T.inkSoft, textTransform: "uppercase" }}>{y}</div>
+                <div style={{ fontFamily: serif, fontSize: 23, fontWeight: 600, marginTop: 4 }}>{usdK(v)}</div>
+                {hit && <div style={{ fontSize: 11, fontFamily: mono, color: T.gain, marginTop: 3 }}>≥ {usdK(hit)} ✓</div>}
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ height: 230, marginTop: 20 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={projection} margin={{ left: 8, right: 8, top: 6 }}>
+              <defs>
+                <linearGradient id="proj" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#C09A5B" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#C09A5B" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke={T.line} vertical={false} />
+              <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={3} />
+              <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} width={56} />
+              <Tooltip content={<ChartTip />} />
+              <Area type="monotone" dataKey="v" stroke="#C09A5B" strokeWidth={2} fill="url(#proj)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 8 }}>
+          Deterministic compounding at a constant rate — a planning sketch, not a forecast. A real build could layer Monte Carlo bands here.
+        </div>
+      </Card>
+    </div>
+  );
+}
