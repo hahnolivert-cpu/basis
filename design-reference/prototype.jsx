@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
-  BarChart, Bar, XAxis, YAxis, AreaChart, Area, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, AreaChart, Area, CartesianGrid, LineChart, Line,
 } from "recharts";
 
 /* ------------------------------------------------------------------ */
@@ -363,6 +363,57 @@ function DriftCard() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Currency lens: the same net worth denominated in USD, EUR, and BTC. */
+/* Mock FX/BTC history aligned to NW_HISTORY; real build uses daily    */
+/* EURUSD + BTCUSD closes stored alongside snapshots.                  */
+/* ------------------------------------------------------------------ */
+const EURUSD_HIST = [1.03, 1.04, 1.08, 1.09, 1.11, 1.14, 1.16, 1.16, 1.17, 1.16, 1.15, 1.13, 1.11, 1.12, 1.10, 1.09, 1.13, 1.12, 1.10];
+const BTCUSD_HIST = [95000, 89000, 82000, 84000, 103000, 105000, 117000, 109000, 112000, 104000, 91000, 88000, 79000, 84000, 76000, 70000, 66000, 68000, 63817];
+
+function CurrencyLensCard({ startNW, btcPx }) {
+  const data = NW_HISTORY.map((p, i) => ({
+    m: p.m,
+    USD: +((p.v / NW_HISTORY[0].v) * 100).toFixed(1),
+    EUR: +(((p.v / EURUSD_HIST[i]) / (NW_HISTORY[0].v / EURUSD_HIST[0])) * 100).toFixed(1),
+    BTC: +(((p.v / BTCUSD_HIST[i]) / (NW_HISTORY[0].v / BTCUSD_HIST[0])) * 100).toFixed(1),
+  }));
+  const eurNow = startNW / EURUSD_HIST[EURUSD_HIST.length - 1];
+  const btcNow = startNW / btcPx;
+  const LINES = [["USD", T.ledger], ["EUR", "#2F4858"], ["BTC", "#C09A5B"]];
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+        <Eyebrow style={{ marginBottom: 0 }}>Net worth through three lenses · indexed to 100</Eyebrow>
+        <div style={{ fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>
+          {usd(startNW)} · €{fmt(eurNow)} · ₿{btcNow.toFixed(2)}
+        </div>
+      </div>
+      <div style={{ height: 220, marginTop: 12 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ left: 8, right: 8, top: 6 }}>
+            <CartesianGrid stroke={T.line} vertical={false} />
+            <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={2} />
+            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} width={40} domain={["auto", "auto"]} />
+            <Tooltip formatter={(v, n) => [v, n]} contentStyle={{ background: T.ink, border: "none", borderRadius: 6, fontFamily: mono, fontSize: 12 }} labelStyle={{ color: "#fff" }} itemStyle={{ color: "#fff" }} />
+            {LINES.map(([k, c]) => (
+              <Line key={k} type="monotone" dataKey={k} stroke={c} strokeWidth={k === "USD" ? 2.5 : 1.8} dot={false} strokeDasharray={k === "USD" ? "0" : "0"} />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: T.inkSoft, fontFamily: mono, flexWrap: "wrap" }}>
+        {LINES.map(([k, c]) => (
+          <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 12, height: 3, borderRadius: 2, background: c }} />{k}-denominated
+          </span>
+        ))}
+        <span style={{ marginLeft: "auto" }}>Same wealth, three yardsticks — growth in BTC terms means you outgrew bitcoin itself.</span>
+      </div>
+    </Card>
+  );
+}
+
 /* ================================================================== */
 /* TAB 1 · NET WORTH                                                   */
 /* ================================================================== */
@@ -438,6 +489,7 @@ function NetWorthTab({ holdings, lookThrough, setLookThrough }) {
           </ResponsiveContainer>
         </div>
       </Card>
+      <CurrencyLensCard startNW={holdings.reduce((s, h) => s + h.value, 0) - DEBTS} btcPx={(() => { const b = holdings.find((h) => h.sym === "BTC"); return b ? b.value / b.qty : 63817; })()} />
 
       {/* Composition */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 30, marginBottom: 14, flexWrap: "wrap", gap: 10 }}>

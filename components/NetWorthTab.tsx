@@ -10,6 +10,7 @@ import { SignedBarCard } from "@/components/charts/SignedBarCard";
 import { ConcentrationCard } from "@/components/charts/ConcentrationCard";
 import { DriftCard } from "@/components/charts/DriftCard";
 import { TrueExposureCard } from "@/components/charts/TrueExposureCard";
+import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
 import type { Holding } from "@/lib/types";
 
 export function NetWorthTab({
@@ -32,6 +33,9 @@ export function NetWorthTab({
     .filter((h) => h.yld > 0)
     .map((h) => ({ ...h, inc: (h.value * h.yld) / 100 }))
     .sort((a, b) => b.inc - a.inc);
+  const startNW = total - DEBTS;
+  const btcHolding = holdings.find((h) => h.sym === "BTC");
+  const btcPx = btcHolding?.qty ? btcHolding.value / btcHolding.qty : 63817;
 
   return (
     <div>
@@ -99,6 +103,7 @@ export function NetWorthTab({
           </ResponsiveContainer>
         </div>
       </Card>
+      <CurrencyLensCard startNW={startNW} btcPx={btcPx} />
 
       {/* Composition */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 30, marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
