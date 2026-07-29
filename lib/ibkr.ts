@@ -20,7 +20,9 @@ export type FlexPosition = {
   markPrice: number;
 };
 
-export type FlexCash = { currency: string; endingCash: number };
+// fxRateToBase is only present if the Flex query's Cash Report section has that
+// field enabled; it is the exact rate IBKR used, so preferred when available.
+export type FlexCash = { currency: string; endingCash: number; fxRateToBase: number | null };
 
 export type FlexTxn = {
   externalId: string;
@@ -42,6 +44,9 @@ export type FlexStatement = {
   // currency by IBKR. Preferred over summing `cash`, which would add EUR to
   // USD as if they were the same unit.
   cashBaseTotal: number | null;
+  // EUR per USD (~0.88), matching the weekly_snapshots convention. Sourced
+  // from IBKR rather than Finnhub, whose forex endpoint needs a paid plan.
+  usdToEur: number | null;
   transactions: FlexTxn[];
   skipped: string[];
 };
@@ -88,6 +93,35 @@ export function assetClassFor(assetCategory: string): "Cash" | "Equities" | "Cry
   return null; // OPT, FUT, BOND, etc. — not modelled yet
 }
 
+// EUR per USD from the cash report. The account's base currency is assumed to
+// be USD, which holds for this app (all money is stored as USD cents).
+//
+// Preferred source is the EUR row's own fxRateToBase. Failing that, the rate is
+// implied by arithmetic: BASE_SUMMARY minus the USD balance is the EUR balance
+// expressed in USD. That only works when EUR is the *single* non-USD currency
+// with a balance — with two, the split is underdetermined, so this returns null
+// rather than inventing a plausible-looking number.
+export function deriveUsdToEur(cash: FlexCash[], cashBaseTotal: number | null): number | null {
+  const eur = cash.find((c) => c.currency.toUpperCase() === "EUR");
+  if (!eur) return null;
+
+  if (eur.fxRateToBase && eur.fxRateToBase > 0) return 1 / eur.fxRateToBase;
+
+  if (cashBaseTotal === null || eur.endingCash === 0) return null;
+  const usd = cash.find((c) => c.currency.toUpperCase() === "USD")?.endingCash ?? 0;
+  const otherNonZero = cash.filter(
+    (c) => !["USD", "EUR"].includes(c.currency.toUpperCase()) && c.endingCash !== 0
+  );
+  if (otherNonZero.length > 0) return null;
+
+  const eurInUsd = cashBaseTotal - usd;
+  if (eurInUsd <= 0) return null;
+  const eurusd = eurInUsd / eur.endingCash;
+  // Reject anything outside a sane band, in case the assumptions above break.
+  if (eurusd < 0.5 || eurusd > 2) return null;
+  return 1 / eurusd;
+}
+
 export function parseFlexStatement(xml: string): FlexStatement {
   const parser = new XMLParser({
     ignoreAttributes: false,
@@ -128,10 +162,12 @@ export function parseFlexStatement(xml: string): FlexStatement {
   const cashRows = toArray(stmt.CashReport?.CashReportCurrency).map((c) => ({
     currency: String(c.currency ?? "").trim(),
     endingCash: num(c.endingCash),
+    fxRateToBase: c.fxRateToBase !== undefined ? num(c.fxRateToBase) : null,
   }));
   const cash: FlexCash[] = cashRows.filter((c) => c.currency.toUpperCase() !== "BASE_SUMMARY");
   const baseRow = cashRows.find((c) => c.currency.toUpperCase() === "BASE_SUMMARY");
   const cashBaseTotal = baseRow ? baseRow.endingCash : null;
+  const usdToEur = deriveUsdToEur(cash, cashBaseTotal);
 
   const transactions: FlexTxn[] = [];
 
@@ -179,6 +215,7 @@ export function parseFlexStatement(xml: string): FlexStatement {
     positions,
     cash,
     cashBaseTotal,
+    usdToEur,
     transactions,
     skipped,
   };

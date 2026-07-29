@@ -72,8 +72,14 @@ export async function GET(request: NextRequest) {
 
   // Provider syncs first, so the week is snapshotted against freshly pulled
   // positions. A sync failure is recorded but doesn't abort the snapshot.
+  // IBKR also yields a real EURUSD rate, which Finnhub's free tier won't serve.
+  let syncedUsdToEur: number | null = null;
   try {
     const sync = await runAllSyncs();
+    for (const r of sync.results) {
+      const rate = (r as { usdToEur?: number | null }).usdToEur;
+      if (r.ok && typeof rate === "number" && rate > 0) syncedUsdToEur = rate;
+    }
     if (sync.failed > 0) {
       const failures = sync.results.filter((r) => !r.ok).map((r) => `${r.target}: ${r.error}`);
       warnings.push(`${sync.failed} provider sync(s) failed — ${failures.join("; ")}`);
@@ -123,10 +129,12 @@ export async function GET(request: NextRequest) {
     .limit(1);
   const prev = prevRows?.[0];
 
-  let usd_to_eur = await fetchUsdToEur();
+  // IBKR first (real rate, no paid plan needed), then Finnhub, then carry
+  // forward — never write a zero that would corrupt the EUR series.
+  let usd_to_eur = syncedUsdToEur ?? (await fetchUsdToEur());
   if (usd_to_eur === null) {
     usd_to_eur = prev ? Number(prev.usd_to_eur) : null;
-    warnings.push("EURUSD unavailable, carried forward previous rate");
+    warnings.push("EURUSD unavailable from IBKR or Finnhub, carried forward previous rate");
   }
 
   let btc_price_usd = quotes.BTC?.price ?? (await fetchBtcPrice());

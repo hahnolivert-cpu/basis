@@ -47,6 +47,7 @@ export type IbkrPlan = {
   statement: { accountId: string; fromDate: string | null; toDate: string | null };
   upserts: HoldingWrite[];
   cashUpdate: { value_cents: number; currencies: { currency: string; endingCash: number }[] } | null;
+  usdToEur: number | null;
   deletes: { symbol: string; reason: string }[];
   newTransactions: TxnWrite[];
   alreadyRecordedTransactions: number;
@@ -166,6 +167,7 @@ async function buildPlan(supabase: Supabase, statement: FlexStatement): Promise<
     statement: { accountId: statement.accountId, fromDate: statement.fromDate, toDate: statement.toDate },
     upserts,
     cashUpdate,
+    usdToEur: statement.usdToEur,
     deletes,
     newTransactions,
     alreadyRecordedTransactions: known.size,
@@ -192,6 +194,7 @@ export function summarisePlan(plan: IbkrPlan) {
     cash: plan.cashUpdate
       ? { total: money(plan.cashUpdate.value_cents), byCurrency: plan.cashUpdate.currencies }
       : null,
+    usdToEur: plan.usdToEur,
     wouldDelete: plan.deletes,
     wouldInsertTransactions: plan.newTransactions.length,
     transactionSample: plan.newTransactions.slice(0, 25).map((t) => ({
@@ -286,6 +289,7 @@ export async function runIbkrSync({ dryRun = false }: { dryRun?: boolean } = {})
     dryRun: false,
     account: plan.account,
     statement: plan.statement,
+    usdToEur: plan.usdToEur,
     applied,
     skipped: plan.skipped,
     warnings: plan.warnings,
