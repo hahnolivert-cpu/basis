@@ -28,10 +28,14 @@ const serif = "'Fraunces', Georgia, serif";
 /* yld = estimated trailing dividend/interest yield.                   */
 /* ------------------------------------------------------------------ */
 const ETF_DATA = {
-  SPHQ: { sectors: { Technology: 0.32, Industrials: 0.21, "Health Care": 0.13, Financials: 0.11, "Consumer Disc.": 0.09, "Comm. Services": 0.08, Other: 0.06 }, geos: { "United States": 1.0 } },
-  ILF: { sectors: { Financials: 0.36, Materials: 0.17, Energy: 0.14, "Consumer Staples": 0.13, Industrials: 0.08, Utilities: 0.07, Other: 0.05 }, geos: { Brazil: 0.58, Mexico: 0.26, Chile: 0.08, Peru: 0.05, Colombia: 0.03 } },
-  SGOV: { sectors: { "Govt. Bonds": 1.0 }, geos: { "United States": 1.0 } },
-  VOO: { sectors: { Technology: 0.33, Financials: 0.13, "Health Care": 0.11, "Consumer Disc.": 0.11, "Comm. Services": 0.09, Industrials: 0.08, Other: 0.15 }, geos: { "United States": 1.0 } },
+  SPHQ: { sectors: { Technology: 0.32, Industrials: 0.21, "Health Care": 0.13, Financials: 0.11, "Consumer Disc.": 0.09, "Comm. Services": 0.08, Other: 0.06 }, geos: { "United States": 1.0 },
+    top: [["Apple", 0.058], ["Microsoft", 0.056], ["NVIDIA", 0.055], ["Broadcom", 0.044], ["Eli Lilly", 0.031], ["Mastercard", 0.03], ["Visa", 0.029], ["Alphabet", 0.026], ["Exxon Mobil", 0.024], ["Johnson & Johnson", 0.023]] },
+  ILF: { sectors: { Financials: 0.36, Materials: 0.17, Energy: 0.14, "Consumer Staples": 0.13, Industrials: 0.08, Utilities: 0.07, Other: 0.05 }, geos: { Brazil: 0.58, Mexico: 0.26, Chile: 0.08, Peru: 0.05, Colombia: 0.03 },
+    top: [["Itaú Unibanco", 0.098], ["Vale", 0.086], ["Nubank", 0.079], ["Petrobras", 0.072], ["América Móvil", 0.062], ["Grupo México", 0.045], ["FEMSA", 0.044], ["Banorte", 0.041], ["Credicorp", 0.038], ["B3", 0.033]] },
+  SGOV: { sectors: { "Govt. Bonds": 1.0 }, geos: { "United States": 1.0 },
+    top: [["U.S. Treasury Bills", 1.0]] },
+  VOO: { sectors: { Technology: 0.33, Financials: 0.13, "Health Care": 0.11, "Consumer Disc.": 0.11, "Comm. Services": 0.09, Industrials: 0.08, Other: 0.15 }, geos: { "United States": 1.0 },
+    top: [["NVIDIA", 0.075], ["Microsoft", 0.068], ["Apple", 0.06], ["Amazon", 0.041], ["Alphabet", 0.04], ["Meta", 0.029], ["Broadcom", 0.024], ["Tesla", 0.019], ["Berkshire Hathaway", 0.016], ["JPMorgan", 0.014]] },
 };
 
 // qty = share/coin count implied by screenshot values; live sync reprices qty x price.
@@ -201,6 +205,58 @@ const Toggle = ({ on, setOn, label }) => (
     {label}
   </button>
 );
+
+/* ------------------------------------------------------------------ */
+/* True exposure (X-Ray): direct holdings merged with ETF look-through */
+/* ------------------------------------------------------------------ */
+const DIRECT_NAME = { GOOGL: "Alphabet", AAPL: "Apple", NVDA: "NVIDIA", AMZN: "Amazon", MSTR: "Strategy", TTD: "The Trade Desk", BTC: "Bitcoin", ETH: "Ethereum", SOL: "Solana", LINK: "Chainlink", HYPE: "Hyperliquid" };
+
+function TrueExposureCard({ holdings }) {
+  const map = {};
+  const add = (name, key, v) => {
+    if (!map[name]) map[name] = { name, direct: 0, viaEtf: 0 };
+    map[name][key] += v;
+  };
+  for (const h of holdings) {
+    if (h.cls === "Cash") continue;
+    if (h.etf) {
+      let used = 0;
+      ETF_DATA[h.etf].top.forEach(([n, w]) => { add(n, "viaEtf", h.value * w); used += w; });
+      if (used < 1) add("Other (inside ETFs)", "viaEtf", h.value * (1 - used));
+    } else add(DIRECT_NAME[h.sym] || h.sym, "direct", h.value);
+  }
+  const rows = Object.values(map)
+    .map((r) => ({ ...r, total: Math.round(r.direct + r.viaEtf) }))
+    .filter((r) => r.name !== "Other (inside ETFs)")
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
+  return (
+    <Card style={{ marginTop: 16 }}>
+      <Eyebrow>True exposure by asset · direct + inside ETFs</Eyebrow>
+      <div style={{ height: 300 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 14 }}>
+            <XAxis type="number" hide />
+            <YAxis type="category" dataKey="name" width={132} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: T.inkSoft, fontFamily: mono }} />
+            <Tooltip cursor={{ fill: "rgba(14,91,67,0.06)" }} content={({ active, payload }) =>
+              active && payload?.length ? (
+                <div style={{ background: T.ink, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
+                  {payload[0].payload.name}: {usd(payload[0].payload.total)} = direct {usd(payload[0].payload.direct)} + via ETFs {usd(payload[0].payload.viaEtf)}
+                </div>
+              ) : null} />
+            <Bar dataKey="direct" stackId="x" fill={T.ledger} barSize={15} />
+            <Bar dataKey="viaEtf" stackId="x" fill="#9EBEB2" radius={[0, 4, 4, 0]} barSize={15} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: T.inkSoft, fontFamily: mono, flexWrap: "wrap" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: T.ledger }} />Held directly</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: "#9EBEB2" }} />Via ETF holdings</span>
+        <span style={{ marginLeft: "auto" }}>Cash accounts excluded; ETF weights are top-10 approximations.</span>
+      </div>
+    </Card>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Analytics helpers                                                   */
@@ -393,6 +449,7 @@ function NetWorthTab({ holdings, lookThrough, setLookThrough }) {
         <CompositionCard title="Sector — true exposure" data={bySector} total={total} />
         <CompositionCard title="Geography — true exposure" data={byGeo} total={total} />
       </div>
+      <TrueExposureCard holdings={holdings} />
 
       {/* Analytics */}
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 30, marginBottom: 14 }}>Analytics</div>
@@ -443,6 +500,7 @@ function HoldingsTab({ holdings }) {
       else {
         const m = map[h.sym];
         m.day = (m.day * m.value + h.day * h.value) / (m.value + h.value);
+        m.yld = (m.yld * m.value + h.yld * h.value) / (m.value + h.value);
         m.value += h.value; m.cost += h.cost;
       }
       map[h.sym].sources.push(`${h.acct}${h.pf === "capital" ? " · 976" : " · Personal"}`);
@@ -475,10 +533,11 @@ function HoldingsTab({ holdings }) {
     { key: "klass", label: "Class", align: "left" },
     { key: "cost", label: "Cost", align: "right" },
     { key: "value", label: "Value", align: "right" },
+    { key: "yld", label: "Yield", align: "right" },
     { key: "day", label: "Day", align: "right" },
     { key: "gain", label: "Total gain", align: "right" },
   ];
-  const grid = "2.2fr 0.8fr 1fr 1fr 1.2fr 1.4fr";
+  const grid = "2.1fr 0.7fr 0.9fr 1fr 0.7fr 1.1fr 1.3fr";
 
   const tabs = [["all", "All"], ["capital", "976 Capital"], ["personal", "Personal"]];
   return (
@@ -527,6 +586,7 @@ function HoldingsTab({ holdings }) {
               <div style={{ fontFamily: mono, fontSize: 11.5, color: h.klass === "ETFs" ? T.ledger : T.inkSoft }}>{h.klass}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>{isCash ? "—" : usd(h.cost)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12.5, color: h.yld > 0 ? T.ink : T.inkSoft }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
               <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12.5 }}>—</span> : <Delta pct={h.day} amt={dAmt} size={12.5} />}</div>
               <div style={{ textAlign: "right" }}>{isCash ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12.5 }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={12.5} />}</div>
             </div>
@@ -743,6 +803,14 @@ Respond with ONLY a raw JSON object, no markdown fences, no prose, mapping each 
   const dayAmt = holdings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
   const dayPct = (dayAmt / (total - dayAmt)) * 100;
   const startNW = total - DEBTS;
+  const inv = holdings.filter((h) => h.cls !== "Cash");
+  const invVal = inv.reduce((s, h) => s + h.value, 0);
+  const invCost = inv.reduce((s, h) => s + h.cost, 0);
+  const gainAmt = invVal - invCost;
+  const gainPct = (gainAmt / invCost) * 100;
+  // est. annualized money-weighted return over the 19-month mock history;
+  // real build: XIRR over actual dated cash flows + current value.
+  const irr = (Math.pow(invVal / invCost, 12 / 19) - 1) * 100;
 
   const TABS = [["networth", "Net Worth"], ["holdings", "Holdings"], ["scenarios", "Scenario Planning"]];
 
@@ -786,9 +854,10 @@ Respond with ONLY a raw JSON object, no markdown fences, no prose, mapping each 
             <div style={{ fontFamily: serif, fontWeight: 600, fontSize: 54, lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
             <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>net worth · {usd(total)} assets − {usd(DEBTS)} debts</div>
           </div>
-          <div style={{ paddingBottom: 6 }}>
-            <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>1 day</span>
-            <Delta pct={dayPct} amt={dayAmt} size={14} />
+          <div style={{ paddingBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div><span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>1 day</span><Delta pct={dayPct} amt={dayAmt} size={13.5} /></div>
+            <div><span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>Invested · all time</span><Delta pct={gainPct} amt={gainAmt} size={13.5} /></div>
+            <div><span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>IRR · est. annualized</span><span style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13.5 }}>{sign(irr, irr.toFixed(1))}%/yr</span></div>
           </div>
         </div>
 

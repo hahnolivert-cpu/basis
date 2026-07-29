@@ -3,11 +3,23 @@ import type { Holding } from "./types";
 // Static data — seeded from Kubera + Yahoo screenshots.
 // (est.) rows are placeholders sized to match account totals.
 // yld = estimated trailing dividend/interest yield.
-export const ETF_DATA: Record<string, { sectors: Record<string, number>; geos: Record<string, number> }> = {
-  SPHQ: { sectors: { Technology: 0.32, Industrials: 0.21, "Health Care": 0.13, Financials: 0.11, "Consumer Disc.": 0.09, "Comm. Services": 0.08, Other: 0.06 }, geos: { "United States": 1.0 } },
-  ILF: { sectors: { Financials: 0.36, Materials: 0.17, Energy: 0.14, "Consumer Staples": 0.13, Industrials: 0.08, Utilities: 0.07, Other: 0.05 }, geos: { Brazil: 0.58, Mexico: 0.26, Chile: 0.08, Peru: 0.05, Colombia: 0.03 } },
-  SGOV: { sectors: { "Govt. Bonds": 1.0 }, geos: { "United States": 1.0 } },
-  VOO: { sectors: { Technology: 0.33, Financials: 0.13, "Health Care": 0.11, "Consumer Disc.": 0.11, "Comm. Services": 0.09, Industrials: 0.08, Other: 0.15 }, geos: { "United States": 1.0 } },
+export const ETF_DATA: Record<string, { sectors: Record<string, number>; geos: Record<string, number>; top: [string, number][] }> = {
+  SPHQ: {
+    sectors: { Technology: 0.32, Industrials: 0.21, "Health Care": 0.13, Financials: 0.11, "Consumer Disc.": 0.09, "Comm. Services": 0.08, Other: 0.06 }, geos: { "United States": 1.0 },
+    top: [["Apple", 0.058], ["Microsoft", 0.056], ["NVIDIA", 0.055], ["Broadcom", 0.044], ["Eli Lilly", 0.031], ["Mastercard", 0.03], ["Visa", 0.029], ["Alphabet", 0.026], ["Exxon Mobil", 0.024], ["Johnson & Johnson", 0.023]],
+  },
+  ILF: {
+    sectors: { Financials: 0.36, Materials: 0.17, Energy: 0.14, "Consumer Staples": 0.13, Industrials: 0.08, Utilities: 0.07, Other: 0.05 }, geos: { Brazil: 0.58, Mexico: 0.26, Chile: 0.08, Peru: 0.05, Colombia: 0.03 },
+    top: [["Itaú Unibanco", 0.098], ["Vale", 0.086], ["Nubank", 0.079], ["Petrobras", 0.072], ["América Móvil", 0.062], ["Grupo México", 0.045], ["FEMSA", 0.044], ["Banorte", 0.041], ["Credicorp", 0.038], ["B3", 0.033]],
+  },
+  SGOV: {
+    sectors: { "Govt. Bonds": 1.0 }, geos: { "United States": 1.0 },
+    top: [["U.S. Treasury Bills", 1.0]],
+  },
+  VOO: {
+    sectors: { Technology: 0.33, Financials: 0.13, "Health Care": 0.11, "Consumer Disc.": 0.11, "Comm. Services": 0.09, Industrials: 0.08, Other: 0.15 }, geos: { "United States": 1.0 },
+    top: [["NVIDIA", 0.075], ["Microsoft", 0.068], ["Apple", 0.06], ["Amazon", 0.041], ["Alphabet", 0.04], ["Meta", 0.029], ["Broadcom", 0.024], ["Tesla", 0.019], ["Berkshire Hathaway", 0.016], ["JPMorgan", 0.014]],
+  },
 };
 
 // qty = share/coin count implied by screenshot values; live sync (future) reprices qty x price.

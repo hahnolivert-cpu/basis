@@ -1,6 +1,12 @@
 import { ETF_DATA } from "./data";
 import type { Holding, NamedValue } from "./types";
 
+// Est. annualized money-weighted return over `months` of mock net-worth
+// history. TODO: replace with XIRR over actual dated transactions and
+// contributions once transaction data exists.
+export const estIrr = (invVal: number, invCost: number, months: number) =>
+  (Math.pow(invVal / invCost, 12 / months) - 1) * 100;
+
 export const fvCalc = (P: number, monthly: number, annual: number, months: number) => {
   const r = annual / 12;
   if (r === 0) return P + monthly * months;

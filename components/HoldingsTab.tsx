@@ -7,7 +7,7 @@ import { subclass } from "@/lib/calc";
 import { Delta } from "@/components/ui";
 import type { Holding, Portfolio } from "@/lib/types";
 
-type SortKey = "sym" | "klass" | "cost" | "value" | "day" | "gain";
+type SortKey = "sym" | "klass" | "cost" | "value" | "yld" | "day" | "gain";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 type MergedRow = Holding & { sources: string[]; klass: string; gain: number; gainPct: number };
 
@@ -16,10 +16,11 @@ const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "klass", label: "Class", align: "left" },
   { key: "cost", label: "Cost", align: "right" },
   { key: "value", label: "Value", align: "right" },
+  { key: "yld", label: "Yield", align: "right" },
   { key: "day", label: "Day", align: "right" },
   { key: "gain", label: "Total gain", align: "right" },
 ];
-const GRID = "2.2fr 0.8fr 1fr 1fr 1.2fr 1.4fr";
+const GRID = "2.1fr 0.7fr 0.9fr 1fr 0.7fr 1.1fr 1.3fr";
 const TABS: [string, string][] = [
   ["all", "All"],
   ["capital", "976 Capital"],
@@ -39,6 +40,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
       else {
         const m = map[h.sym];
         m.day = (m.day * m.value + h.day * h.value) / (m.value + h.value);
+        m.yld = (m.yld * m.value + h.yld * h.value) / (m.value + h.value);
         m.value += h.value;
         m.cost += h.cost;
       }
@@ -127,6 +129,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
               <div style={{ fontFamily: mono, fontSize: 11.5, color: h.klass === "ETFs" ? T.ledger : T.inkSoft }}>{h.klass}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>{isCash ? "—" : usd(h.cost)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12.5, color: h.yld > 0 ? T.ink : T.inkSoft }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
               <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12.5 }}>—</span> : <Delta pct={h.day} amt={dAmt} size={12.5} />}</div>
               <div style={{ textAlign: "right" }}>{isCash ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12.5 }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={12.5} />}</div>
             </div>

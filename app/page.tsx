@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { T, mono, serif, sans } from "@/lib/theme";
-import { usd } from "@/lib/format";
+import { sign, usd } from "@/lib/format";
+import { estIrr } from "@/lib/calc";
 import { BASE_HOLDINGS, DEBTS } from "@/lib/data";
 import { Delta } from "@/components/ui";
 import { NetWorthTab } from "@/components/NetWorthTab";
@@ -27,6 +28,12 @@ export default function Home() {
   const dayAmt = holdings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
   const dayPct = (dayAmt / (total - dayAmt)) * 100;
   const startNW = total - DEBTS;
+  const inv = holdings.filter((h) => h.cls !== "Cash");
+  const invVal = inv.reduce((s, h) => s + h.value, 0);
+  const invCost = inv.reduce((s, h) => s + h.cost, 0);
+  const gainAmt = invVal - invCost;
+  const gainPct = (gainAmt / invCost) * 100;
+  const irr = estIrr(invVal, invCost, 19);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -61,9 +68,19 @@ export default function Home() {
             <div style={{ fontFamily: serif, fontWeight: 600, fontSize: 54, lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
             <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>net worth · {usd(total)} assets − {usd(DEBTS)} debts</div>
           </div>
-          <div style={{ paddingBottom: 6 }}>
-            <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>1 day</span>
-            <Delta pct={dayPct} amt={dayAmt} size={14} />
+          <div style={{ paddingBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div>
+              <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>1 day</span>
+              <Delta pct={dayPct} amt={dayAmt} size={13.5} />
+            </div>
+            <div>
+              <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>Invested · all time</span>
+              <Delta pct={gainPct} amt={gainAmt} size={13.5} />
+            </div>
+            <div>
+              <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>IRR · est. annualized</span>
+              <span style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13.5 }}>{sign(irr, irr.toFixed(1))}%/yr</span>
+            </div>
           </div>
         </div>
 

@@ -9,6 +9,7 @@ import { CompositionCard } from "@/components/charts/CompositionCard";
 import { SignedBarCard } from "@/components/charts/SignedBarCard";
 import { ConcentrationCard } from "@/components/charts/ConcentrationCard";
 import { DriftCard } from "@/components/charts/DriftCard";
+import { TrueExposureCard } from "@/components/charts/TrueExposureCard";
 import type { Holding } from "@/lib/types";
 
 export function NetWorthTab({
@@ -109,6 +110,7 @@ export function NetWorthTab({
         <CompositionCard title="Sector — true exposure" data={bySector} total={total} />
         <CompositionCard title="Geography — true exposure" data={byGeo} total={total} />
       </div>
+      <TrueExposureCard holdings={holdings} />
 
       {/* Analytics */}
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 30, marginBottom: 14 }}>Analytics</div>
