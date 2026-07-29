@@ -1,7 +1,8 @@
 # Basis
 
-Single-user personal portfolio and net worth tracker. There is no auth, multi-tenancy,
-or account system — this app is built for one person's finances.
+Single-user personal portfolio and net worth tracker — no multi-tenancy. Auth is
+Supabase email/password (`@supabase/ssr`, cookie-based sessions); sign-ups are
+disabled in [lib/auth-config.ts](lib/auth-config.ts) once the one account exists.
 
 ## Data sources (planned)
 
@@ -11,8 +12,20 @@ or account system — this app is built for one person's finances.
 - **Finnhub** / **CoinGecko** — live equity and crypto prices
 - **Polygon** — dividend data
 
-None of these are wired up yet. The app currently runs on the static `BASE_HOLDINGS`
-data in [lib/data.ts](lib/data.ts), seeded from account screenshots.
+None of these are wired up yet. The app UI currently runs on the static
+`BASE_HOLDINGS` data in [lib/data.ts](lib/data.ts), seeded from account
+screenshots — it does not read from the database below yet.
+
+## Data model
+
+Postgres schema lives in `supabase/migrations/` (Supabase CLI; project linked via
+`supabase link --project-ref qhcjgkndxccnkptbhfuv`). Tables: `accounts`, `holdings`,
+`snapshots` (daily per-account value + EURUSD/BTCUSD closes), `transactions`
+(dated cash flows, for real XIRR later), `plaid_items` (institution + access
+token + sync cursor). All five have RLS enabled with no policies — only the
+`service_role` key (bypasses RLS) can read/write, from `app/api/*` routes only,
+via [lib/supabase/service.ts](lib/supabase/service.ts). `SUPABASE_SERVICE_ROLE_KEY`
+still needs to be added to `.env.local` before any server route can use it.
 
 ## Architecture rules
 
