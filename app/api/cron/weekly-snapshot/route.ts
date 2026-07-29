@@ -1,10 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { BASE_HOLDINGS } from "@/lib/data";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getQuotes } from "@/lib/market";
+import { runAllSyncs } from "@/lib/sync";
 
 // Scheduled by vercel.json for Sundays at 23:00 UTC. Not covered by the auth
 // middleware (see middleware.ts) — it authenticates on CRON_SECRET instead.
+//
+// Everything here runs in-process. An earlier version called /api/quotes and
+// /api/sync over HTTP, which always 401'd: those routes sit behind the session
+// middleware and a scheduled run carries no cookie, so the snapshot silently
+// fell back to stale seed values.
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 // The Sunday for a given instant: today if it is Sunday (UTC), else the most
 // recent one. The cron fires on Sunday, so this normally returns today.
@@ -18,17 +26,7 @@ function currentSunday(now = new Date()): string {
 // value is deliberately optional — the `?.` guards below are load-bearing.
 type QuoteMap = Record<string, { price: number } | undefined>;
 
-async function fetchQuotes(origin: string, cookie: string | null) {
-  const res = await fetch(`${origin}/api/quotes`, {
-    headers: cookie ? { cookie } : {},
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`/api/quotes returned ${res.status}`);
-  return (await res.json()) as { quotes: QuoteMap; eurusd: number | null };
-}
-
-// CoinGecko direct (rather than via /api/quotes) so the cron gets a BTC price
-// even when the internal call is unavailable.
+// CoinGecko direct as a fallback if the quote batch didn't yield BTC.
 async function fetchBtcPrice(): Promise<number | null> {
   const key = process.env.COINGECKO_API_KEY;
   const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", {
@@ -70,12 +68,24 @@ export async function GET(request: NextRequest) {
 
   // Step 1: refresh live prices, then reprice qty-based holdings the same way
   // the dashboard does. Cash stays at its recorded balance.
+
+  // Provider syncs first, so the week is snapshotted against freshly pulled
+  // positions. A sync failure is recorded but doesn't abort the snapshot.
+  try {
+    const sync = await runAllSyncs();
+    if (sync.failed > 0) {
+      const failures = sync.results.filter((r) => !r.ok).map((r) => `${r.target}: ${r.error}`);
+      warnings.push(`${sync.failed} provider sync(s) failed — ${failures.join("; ")}`);
+    }
+  } catch (e) {
+    warnings.push(`provider sync failed — ${e instanceof Error ? e.message : String(e)}`);
+  }
+
   let quotes: QuoteMap = {};
   try {
-    const q = await fetchQuotes(request.nextUrl.origin, request.headers.get("cookie"));
-    quotes = q.quotes ?? {};
+    quotes = (await getQuotes({ force: true })).quotes ?? {};
   } catch (e) {
-    warnings.push(`quote sync failed, using snapshot values — ${e instanceof Error ? e.message : String(e)}`);
+    warnings.push(`quote refresh failed, using snapshot values — ${e instanceof Error ? e.message : String(e)}`);
   }
 
   const priced = BASE_HOLDINGS.map((h) => {

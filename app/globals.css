@@ -29,6 +29,17 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Used by in-flight buttons (e.g. Sync now) to signal work in progress. */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

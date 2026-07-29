@@ -11,6 +11,7 @@ import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
 import { TrackingTab } from "@/components/TrackingTab";
+import { SyncButton } from "@/components/SyncButton";
 import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
 import { useDividends } from "@/lib/hooks/useDividends";
@@ -75,6 +76,7 @@ export default function Home() {
             <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>
               {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
             </span>
+            <SyncButton />
             <button
               onClick={handleSignOut}
               style={{
