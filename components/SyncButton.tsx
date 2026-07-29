@@ -40,7 +40,12 @@ export function SyncButton() {
       }
 
       // Pull the refreshed holdings/quotes through the dashboard's hooks.
-      await Promise.all([mutate("/api/quotes"), mutate("/api/dividends"), mutate("/api/weekly-snapshots")]);
+      await Promise.all([
+        mutate("/api/holdings"),
+        mutate("/api/quotes"),
+        mutate("/api/dividends"),
+        mutate("/api/weekly-snapshots"),
+      ]);
     } catch (e) {
       setFailed(true);
       setNote(e instanceof Error ? e.message : String(e));

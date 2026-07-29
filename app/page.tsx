@@ -15,6 +15,7 @@ import { SyncButton } from "@/components/SyncButton";
 import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
 import { useDividends } from "@/lib/hooks/useDividends";
+import { useHoldings } from "@/lib/hooks/useHoldings";
 
 const TABS: [string, string][] = [
   ["networth", "Net Worth"],
@@ -29,13 +30,17 @@ export default function Home() {
   const [lookThrough, setLookThrough] = useState(true);
   const { data: quotes } = useQuotes();
   const { data: dividends } = useDividends();
+  const { data: holdingsData } = useHoldings();
 
-  // Reprice qty-based holdings from live quotes; cash stays at snapshot
-  // values until Brex/Plaid are wired in. Yield comes from the daily Polygon
-  // cache for equities/ETFs where available.
+  // Synced holdings from Supabase; the static seed is only a fallback for
+  // before the first sync (or if the database is unreachable).
+  const base = holdingsData?.holdings?.length ? holdingsData.holdings : BASE_HOLDINGS;
+
+  // Reprice qty-based holdings from live quotes; cash stays at its recorded
+  // balance. Yield comes from the daily Polygon cache where available.
   const holdings = useMemo(
     () =>
-      BASE_HOLDINGS.map((h) => {
+      base.map((h) => {
         const q = h.qty ? quotes?.quotes[h.sym] : undefined;
         const yld = dividends?.yields[h.sym];
         return {
@@ -45,7 +50,7 @@ export default function Home() {
           yld: yld ?? h.yld,
         };
       }),
-    [quotes, dividends]
+    [base, quotes, dividends]
   );
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const dayAmt = holdings.reduce((s, h) => s + (h.value * h.day) / 100, 0);

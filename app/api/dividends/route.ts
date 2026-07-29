@@ -1,5 +1,6 @@
 import { jsonNoStore } from "@/lib/http";
 import { BASE_HOLDINGS } from "@/lib/data";
+import { getDbHoldings, quoteRefFor } from "@/lib/holdings";
 import { createServiceClient } from "@/lib/supabase/service";
 
 // Cache logic below depends on running per-request, not a build-time snapshot.
@@ -49,7 +50,26 @@ async function fetchPolygonYield(symbol: string, apiKey: string): Promise<number
 export async function GET() {
   const apiKey = process.env.POLYGON_API_KEY;
   const today = new Date().toISOString().slice(0, 10);
-  const symbols = Array.from(new Set(BASE_HOLDINGS.filter((h) => h.cls === "Equities").map((h) => h.sym)));
+  // Yields for whatever equities are actually held, normalised to the ticker
+  // Polygon expects (IBKR writes share classes with a space, e.g. "BRK B").
+  let equities: { sym: string; cls: string }[];
+  try {
+    const db = await getDbHoldings();
+    equities = db.length ? db : BASE_HOLDINGS;
+  } catch {
+    equities = BASE_HOLDINGS;
+  }
+  const symbols = Array.from(
+    new Set(
+      equities
+        .filter((h) => h.cls === "Equities")
+        .map((h) => {
+          const ref = quoteRefFor(h.sym, h.cls);
+          return ref?.type === "equity" ? ref.symbol : null;
+        })
+        .filter((s): s is string => s !== null)
+    )
+  );
   const yields: Record<string, number> = {};
   const errors: string[] = [];
 

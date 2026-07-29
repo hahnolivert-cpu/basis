@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { BASE_HOLDINGS } from "@/lib/data";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getQuotes } from "@/lib/market";
+import { getDbHoldings } from "@/lib/holdings";
 import { runAllSyncs } from "@/lib/sync";
 
 // Scheduled by vercel.json for Sundays at 23:00 UTC. Not covered by the auth
@@ -88,9 +89,20 @@ export async function GET(request: NextRequest) {
     warnings.push(`quote refresh failed, using snapshot values — ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  const priced = BASE_HOLDINGS.map((h) => {
-    const px = h.qty ? quotes[h.sym]?.price : undefined;
-    return { cls: h.cls, value: px ? h.qty! * px : h.value };
+  // Bucket the real synced holdings; the seed is only a pre-first-sync fallback.
+  let source: { sym: string; cls: string; qty?: number; value: number }[] = BASE_HOLDINGS;
+  try {
+    const db = await getDbHoldings();
+    if (db.length) source = db;
+    else warnings.push("no holdings in database, bucketed the static seed");
+  } catch (e) {
+    warnings.push(`holdings lookup failed, bucketed the static seed — ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  const priced = source.map((h) => {
+    const qty = h.qty;
+    const px = qty ? quotes[h.sym]?.price : undefined;
+    return { cls: h.cls, value: px && qty ? qty * px : h.value };
   });
 
   const bucket = (cls: string) =>
