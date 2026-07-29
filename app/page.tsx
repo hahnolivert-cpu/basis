@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { T, mono, serif, sans } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { BASE_HOLDINGS, DEBTS } from "@/lib/data";
@@ -8,6 +9,7 @@ import { Delta } from "@/components/ui";
 import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
+import { createClient } from "@/lib/supabase/client";
 
 const TABS: [string, string][] = [
   ["networth", "Net Worth"],
@@ -16,6 +18,7 @@ const TABS: [string, string][] = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [tab, setTab] = useState("networth");
   const [lookThrough, setLookThrough] = useState(true);
 
@@ -24,6 +27,13 @@ export default function Home() {
   const dayAmt = holdings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
   const dayPct = (dayAmt / (total - dayAmt)) * 100;
   const startNW = total - DEBTS;
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
@@ -34,6 +44,15 @@ export default function Home() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>screenshot data · Jul 28</span>
+            <button
+              onClick={handleSignOut}
+              style={{
+                background: "none", cursor: "pointer", border: `1px solid ${T.line}`, borderRadius: 999,
+                padding: "6px 13px", fontFamily: "inherit", fontSize: 12, color: T.inkSoft,
+              }}
+            >
+              Sign out
+            </button>
           </div>
         </div>
 
