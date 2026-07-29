@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { jsonNoStore } from "@/lib/http";
 import { BASE_HOLDINGS } from "@/lib/data";
 
 // The in-memory cache below depends on running per-request, not a
@@ -59,7 +59,7 @@ async function fetchCoinGeckoQuotes(symbols: string[], apiKey: string | undefine
 
 export async function GET() {
   if (cache && cache.expires > Date.now()) {
-    return NextResponse.json(cache.data);
+    return jsonNoStore(cache.data);
   }
 
   const finnhubKey = process.env.FINNHUB_API_KEY;
@@ -112,5 +112,5 @@ export async function GET() {
     ...(errors.length ? { errors } : {}),
   };
   cache = { data: payload, expires: Date.now() + CACHE_TTL_MS };
-  return NextResponse.json(payload);
+  return jsonNoStore(payload);
 }

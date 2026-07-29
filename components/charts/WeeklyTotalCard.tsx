@@ -8,9 +8,13 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
   const latest = rows.at(-1);
   const max = Math.max(...rows.map((r) => r.total));
 
-  // Show every goal line, plus headroom above the highest one, so the
-  // remaining distance to each goal is visible rather than cropped.
-  const domainMax = Math.max(...GOALS, max) * 1.08;
+  // Scale to the data (plus the first goal, so that line is always a visible
+  // reference) rather than to the largest goal. Stretching the axis to $5M
+  // would flatten the actual trajectory into the bottom fifth of the card —
+  // the goal progress bars below give the precise standing on every goal.
+  const domainMax = Math.max(max * 1.12, GOALS[0] * 1.05);
+  const visibleGoals = GOALS.filter((g) => g <= domainMax);
+  const offScaleGoals = GOALS.filter((g) => g > domainMax);
 
   return (
     <Card style={{ marginTop: 22 }}>
@@ -50,7 +54,7 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
                 ) : null
               }
             />
-            {GOALS.map((g) => (
+            {visibleGoals.map((g) => (
               <ReferenceLine
                 key={g}
                 y={g}
@@ -70,6 +74,12 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      {offScaleGoals.length > 0 && (
+        <div style={{ fontSize: 11, color: T.inkSoft, fontFamily: mono, marginTop: 8 }}>
+          Dashed line marks {visibleGoals.map(usdK).join(" / ")}. {offScaleGoals.map(usdK).join(" and ")} sit above this
+          scale — see goal progress below.
+        </div>
+      )}
     </Card>
   );
 }

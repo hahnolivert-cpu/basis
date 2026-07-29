@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { jsonNoStore } from "@/lib/http";
 import { BASE_HOLDINGS } from "@/lib/data";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -54,7 +54,7 @@ export async function GET() {
   const errors: string[] = [];
 
   if (!apiKey) {
-    return NextResponse.json({ asOf: today, yields, errors: ["POLYGON_API_KEY not set"] });
+    return jsonNoStore({ asOf: today, yields, errors: ["POLYGON_API_KEY not set"] });
   }
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -93,5 +93,5 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ asOf: today, yields, ...(errors.length ? { errors } : {}) });
+  return jsonNoStore({ asOf: today, yields, ...(errors.length ? { errors } : {}) });
 }

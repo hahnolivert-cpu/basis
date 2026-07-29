@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { jsonNoStore } from "@/lib/http";
 import type { WeeklySnapshot } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export type WeeklySnapshotsPayload = { snapshots: WeeklySnapshot[]; error?: stri
 
 export async function GET() {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ snapshots: [], error: "SUPABASE_SERVICE_ROLE_KEY not set" });
+    return jsonNoStore({ snapshots: [], error: "SUPABASE_SERVICE_ROLE_KEY not set" });
   }
 
   const supabase = createServiceClient();
@@ -19,7 +19,7 @@ export async function GET() {
     .returns<WeeklySnapshot[]>();
 
   if (error) {
-    return NextResponse.json({ snapshots: [], error: error.message }, { status: 500 });
+    return jsonNoStore({ snapshots: [], error: error.message }, { status: 500 });
   }
 
   // Postgres numerics arrive as strings over the wire; coerce the rate columns
@@ -30,5 +30,5 @@ export async function GET() {
     btc_price_usd: Number(r.btc_price_usd),
   }));
 
-  return NextResponse.json({ snapshots });
+  return jsonNoStore({ snapshots });
 }
