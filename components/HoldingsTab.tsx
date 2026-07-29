@@ -5,6 +5,7 @@ import { T, mono } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { subclass } from "@/lib/calc";
 import { Delta } from "@/components/ui";
+import { ManualPositions } from "@/components/ManualPositions";
 import type { Holding, Portfolio } from "@/lib/types";
 
 type SortKey = "sym" | "klass" | "cost" | "value" | "yld" | "day" | "gain";
@@ -136,6 +137,8 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
           );
         })}
       </div>
+
+      <ManualPositions holdings={holdings} />
     </div>
   );
 }

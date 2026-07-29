@@ -12,9 +12,29 @@ disabled in [lib/auth-config.ts](lib/auth-config.ts) once the one account exists
 - **Finnhub** / **CoinGecko** — live equity and crypto prices
 - **Polygon** — dividend data
 
-None of these are wired up yet. The app UI currently runs on the static
-`BASE_HOLDINGS` data in [lib/data.ts](lib/data.ts), seeded from account
-screenshots — it does not read from the database below yet.
+**IBKR, Finnhub, CoinGecko and Polygon are live.** Brex and Plaid are not yet.
+
+The dashboard reads holdings from Supabase via [lib/holdings.ts](lib/holdings.ts).
+`BASE_HOLDINGS` in [lib/data.ts](lib/data.ts) is now only a fallback for before
+the first sync, or if the database is unreachable.
+
+### Sync architecture
+
+- `lib/sync/*` holds provider sync logic as plain functions; `app/api/sync/*`
+  are thin wrappers. **Never call an `/api/*` route over HTTP from the cron** —
+  those routes sit behind the session middleware and a scheduled run carries no
+  cookie, so the call 401s and silently falls back to stale data. Call the lib
+  function in-process instead.
+- Syncs are idempotent: holdings upsert on `(account_id, symbol)`, transactions
+  on `external_id` (IBKR's tradeID/transactionID).
+- Provider tickers differ per API — IBKR writes `BTC.USD-PAXOS` and `BRK B`,
+  Finnhub wants `BRK.B`, CoinGecko wants `bitcoin`. `quoteRefFor()` normalises.
+- Manual/self-custody positions live in an account with
+  `institution = 'Self-custody'`. Identify them by **institution, not
+  `is_manual`** — every seeded row also carries `is_manual`, so matching on it
+  makes a symbol ambiguous across accounts.
+- IBKR cash uses the Flex `BASE_SUMMARY` row, which is already FX-converted.
+  Summing the per-currency rows would add EUR to USD as if they were one unit.
 
 ## Data model
 

@@ -46,7 +46,12 @@ export function quoteRefFor(symbol: string, assetClass: string): QuoteRef {
   return { type: "equity", symbol: symbol.trim().replace(/\s+/g, ".") };
 }
 
-export type DbHolding = Holding & { isManual: boolean; dbSymbol: string };
+// Institution is the unambiguous marker for self-custody rows. `is_manual` is
+// not: every seeded estimate carries it too, so filtering on it would sweep in
+// provider-account rows and make a symbol like LINK ambiguous across accounts.
+export const SELF_CUSTODY_INSTITUTION = "Self-custody";
+
+export type DbHolding = Holding & { isManual: boolean; dbSymbol: string; institution: string };
 
 function mapRow(r: Row): DbHolding {
   const cls = (["Cash", "Equities", "Crypto"].includes(r.asset_class) ? r.asset_class : "Equities") as AssetClass;
@@ -70,6 +75,7 @@ function mapRow(r: Row): DbHolding {
     etf: ETF_DATA[r.symbol] ? r.symbol : undefined,
     yld: Number(r.yield_pct) || 0,
     isManual: r.is_manual,
+    institution: r.accounts?.institution ?? "Unknown",
   };
 }
 
