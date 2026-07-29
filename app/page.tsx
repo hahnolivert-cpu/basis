@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { T, mono, serif, sans } from "@/lib/theme";
 import { sign, usd } from "@/lib/format";
@@ -11,6 +11,8 @@ import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
 import { createClient } from "@/lib/supabase/client";
+import { useQuotes } from "@/lib/hooks/useQuotes";
+import { useDividends } from "@/lib/hooks/useDividends";
 
 const TABS: [string, string][] = [
   ["networth", "Net Worth"],
@@ -22,8 +24,26 @@ export default function Home() {
   const router = useRouter();
   const [tab, setTab] = useState("networth");
   const [lookThrough, setLookThrough] = useState(true);
+  const { data: quotes } = useQuotes();
+  const { data: dividends } = useDividends();
 
-  const holdings = BASE_HOLDINGS;
+  // Reprice qty-based holdings from live quotes; cash stays at snapshot
+  // values until Brex/Plaid are wired in. Yield comes from the daily Polygon
+  // cache for equities/ETFs where available.
+  const holdings = useMemo(
+    () =>
+      BASE_HOLDINGS.map((h) => {
+        const q = h.qty ? quotes?.quotes[h.sym] : undefined;
+        const yld = dividends?.yields[h.sym];
+        return {
+          ...h,
+          value: q ? h.qty! * q.price : h.value,
+          day: q ? q.day : h.day,
+          yld: yld ?? h.yld,
+        };
+      }),
+    [quotes, dividends]
+  );
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const dayAmt = holdings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
   const dayPct = (dayAmt / (total - dayAmt)) * 100;
@@ -50,7 +70,9 @@ export default function Home() {
             Basis <span style={{ color: T.inkSoft, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>· portfolio ledger</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>screenshot data · Jul 28</span>
+            <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>
+              {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
+            </span>
             <button
               onClick={handleSignOut}
               style={{
@@ -105,9 +127,10 @@ export default function Home() {
         {tab === "scenarios" && <ScenarioTab startNW={startNW} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
-          Prototype seeded from screenshots; (est.) rows, share counts, history, and drift are placeholders. Cash
-          balances stay at snapshot values until real account APIs are wired in (Brex + IBKR direct, Chase +
-          Robinhood via Plaid; dividends from IBKR Flex / declared rates in production).
+          Prices are live via Finnhub (stocks/ETFs) and CoinGecko (crypto), polled every 60s; dividend yields are
+          from Polygon, cached daily. Share counts, history, and drift are still (est.) placeholders. Cash balances
+          stay at snapshot values until real account APIs are wired in (Brex + IBKR direct, Chase + Robinhood via
+          Plaid).
         </div>
       </div>
     </div>
