@@ -36,7 +36,12 @@ export type FlexStatement = {
   fromDate: string | null;
   toDate: string | null;
   positions: FlexPosition[];
+  // Per-currency ending balances, excluding the BASE_SUMMARY row.
   cash: FlexCash[];
+  // BASE_SUMMARY: all currencies already converted to the account's base
+  // currency by IBKR. Preferred over summing `cash`, which would add EUR to
+  // USD as if they were the same unit.
+  cashBaseTotal: number | null;
   transactions: FlexTxn[];
   skipped: string[];
 };
@@ -120,10 +125,13 @@ export function parseFlexStatement(xml: string): FlexStatement {
     });
   }
 
-  // BASE_SUMMARY duplicates the base-currency total; keep the real currencies.
-  const cash: FlexCash[] = toArray(stmt.CashReport?.CashReportCurrency)
-    .filter((c) => String(c.currency ?? "").toUpperCase() !== "BASE_SUMMARY")
-    .map((c) => ({ currency: String(c.currency ?? "").trim(), endingCash: num(c.endingCash) }));
+  const cashRows = toArray(stmt.CashReport?.CashReportCurrency).map((c) => ({
+    currency: String(c.currency ?? "").trim(),
+    endingCash: num(c.endingCash),
+  }));
+  const cash: FlexCash[] = cashRows.filter((c) => c.currency.toUpperCase() !== "BASE_SUMMARY");
+  const baseRow = cashRows.find((c) => c.currency.toUpperCase() === "BASE_SUMMARY");
+  const cashBaseTotal = baseRow ? baseRow.endingCash : null;
 
   const transactions: FlexTxn[] = [];
 
@@ -170,6 +178,7 @@ export function parseFlexStatement(xml: string): FlexStatement {
     toDate: stmt.toDate ? flexDate(stmt.toDate) : null,
     positions,
     cash,
+    cashBaseTotal,
     transactions,
     skipped,
   };

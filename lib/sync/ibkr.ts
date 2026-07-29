@@ -108,10 +108,20 @@ async function buildPlan(supabase: Supabase, statement: FlexStatement): Promise<
       };
     });
 
+  // Prefer IBKR's BASE_SUMMARY, which is already FX-converted to the account's
+  // base currency. Summing the per-currency rows would add EUR to USD as if
+  // they were the same unit and understate the balance.
   let cashUpdate: IbkrPlan["cashUpdate"] = null;
-  if (statement.cash.length) {
-    const total = statement.cash.reduce((s, c) => s + c.endingCash, 0);
-    cashUpdate = { value_cents: cents(total), currencies: statement.cash };
+  if (statement.cashBaseTotal !== null) {
+    cashUpdate = { value_cents: cents(statement.cashBaseTotal), currencies: statement.cash };
+  } else if (statement.cash.length) {
+    const currencies = statement.cash.filter((c) => c.endingCash !== 0).map((c) => c.currency);
+    if (currencies.length > 1) {
+      warnings.push(
+        `Flex returned no BASE_SUMMARY cash row and balances span ${currencies.join(", ")}; summed without FX conversion, so the cash figure is unreliable — enable the Cash Report "Base Currency Summary" option`
+      );
+    }
+    cashUpdate = { value_cents: cents(statement.cash.reduce((s, c) => s + c.endingCash, 0)), currencies: statement.cash };
   }
 
   const synced = new Set([...upserts.map((u) => u.symbol), ...(cashUpdate ? [CASH_SYMBOL] : [])]);
