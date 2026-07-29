@@ -10,6 +10,7 @@ import { Delta } from "@/components/ui";
 import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
+import { TrackingTab } from "@/components/TrackingTab";
 import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
 import { useDividends } from "@/lib/hooks/useDividends";
@@ -17,6 +18,7 @@ import { useDividends } from "@/lib/hooks/useDividends";
 const TABS: [string, string][] = [
   ["networth", "Net Worth"],
   ["holdings", "Holdings"],
+  ["tracking", "Tracking"],
   ["scenarios", "Scenario Planning"],
 ];
 
@@ -124,6 +126,7 @@ export default function Home() {
 
         {tab === "networth" && <NetWorthTab holdings={holdings} lookThrough={lookThrough} setLookThrough={setLookThrough} />}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
+        {tab === "tracking" && <TrackingTab />}
         {tab === "scenarios" && <ScenarioTab startNW={startNW} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>

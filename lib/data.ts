@@ -70,10 +70,7 @@ export const DRIFT = NW_HISTORY.map((p, i, arr) => {
   return { m: p.m, Cash: lerp(46, 37.8), ETFs: lerp(35, 40.6), Stocks: lerp(13, 11.9), Crypto: lerp(6, 9.7) };
 });
 
-// Mock monthly EURUSD + BTCUSD closes, aligned index-for-index to NW_HISTORY.
-// TODO: replace with real daily closes once /api/quotes fetches EURUSD (via
-// Finnhub forex) and BTCUSD, and a snapshots table persists them alongside
-// net-worth history. Current ₿ net worth should then derive from a live BTC
-// quote instead of the static BASE_HOLDINGS BTC position.
-export const EURUSD_HIST = [1.03, 1.04, 1.08, 1.09, 1.11, 1.14, 1.16, 1.16, 1.17, 1.16, 1.15, 1.13, 1.11, 1.12, 1.1, 1.09, 1.13, 1.12, 1.1];
-export const BTCUSD_HIST = [95000, 89000, 82000, 84000, 103000, 105000, 117000, 109000, 112000, 104000, 91000, 88000, 79000, 84000, 76000, 70000, 66000, 68000, 63817];
+// Historical EURUSD and BTCUSD closes now live in the weekly_snapshots table
+// (usd_to_eur / btc_price_usd), seeded from the spreadsheet export — see
+// scripts/import-weekly-snapshots.mjs. CurrencyLensCard reads them through
+// useWeeklySnapshots rather than mock arrays.
