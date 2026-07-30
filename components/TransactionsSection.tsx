@@ -49,17 +49,9 @@ const bucketOf = (t: TransactionRow): "Stocks" | "ETFs" | "Crypto" | "Cash" =>
 
 const EMPTY_TRANSACTIONS: TransactionRow[] = [];
 
-export function TransactionsSection({
-  holdings,
-  capitalLabel = "976 Capital",
-  demoTransactions,
-}: {
-  holdings: Holding[];
-  capitalLabel?: string;
-  demoTransactions?: TransactionRow[];
-}) {
-  const { data, isLoading } = useTransactions({ enabled: !demoTransactions });
-  const raw = demoTransactions ?? data?.transactions ?? EMPTY_TRANSACTIONS;
+export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
+  const { data, isLoading } = useTransactions();
+  const raw = data?.transactions ?? EMPTY_TRANSACTIONS;
 
   const [dateFrom, setDateFrom] = useState(() => daysAgo(30));
   const [dateTo, setDateTo] = useState("");
@@ -203,7 +195,7 @@ export function TransactionsSection({
               })}
             </div>
 
-            {isLoading && !demoTransactions && (
+            {isLoading && (
               <div style={{ padding: "16px", fontSize: 12.5, color: T.inkSoft, fontFamily: mono }}>Loading transactions…</div>
             )}
             {!isLoading && sorted.length === 0 && (
@@ -224,7 +216,7 @@ export function TransactionsSection({
                   <span style={{ color: T.inkSoft, fontSize: 11, marginLeft: 6 }}>{t.name}</span>
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, color: t.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
-                  {t.portfolio === "capital" ? capitalLabel : "Personal"}
+                  {t.portfolio === "capital" ? "976 Capital" : "Personal"}
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, color: t.isRecurring ? T.ink : T.inkSoft }}>{t.isRecurring ? "Yes" : "No"}</div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{t.qty.toLocaleString("en-US", { maximumFractionDigits: 4 })}</div>
@@ -240,7 +232,7 @@ export function TransactionsSection({
             ))}
 
             {sorted.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#F4F7F5", fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`, fontSize: 13, fontWeight: 600 }}>
                 <div style={{ gridColumn: "1 / 4" }}>Total ({sorted.length})</div>
                 <div />
                 <div />

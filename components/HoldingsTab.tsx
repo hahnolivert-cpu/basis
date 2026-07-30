@@ -8,7 +8,6 @@ import { ManualPositions } from "@/components/ManualPositions";
 import { TransactionsSection } from "@/components/TransactionsSection";
 import { formatTicker } from "@/lib/holdings";
 import type { Holding, Portfolio } from "@/lib/types";
-import type { TransactionRow } from "@/app/api/transactions/route";
 
 type SortKey = "sym" | "cost" | "value" | "pct" | "yld" | "day" | "gain";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
@@ -34,24 +33,10 @@ const GRID = "2.2fr 1fr 1fr 1fr 1fr 1fr 1fr";
 // Every row is this height regardless of content — a merged multi-source
 // symbol no longer grows a second line, so rows stay uniform.
 const ROW_HEIGHT = 44;
-// Matches how Yahoo Finance renders a ticker: bold and blue, with the
-// company name in muted text underneath.
-const TICKER_BLUE = "#2563EB";
-
-export function HoldingsTab({
-  holdings,
-  capitalLabel = "976 Capital",
-  demoTransactions,
-}: {
-  holdings: Holding[];
-  capitalLabel?: string;
-  // The demo page has no session, so it injects static transaction data
-  // instead of letting TransactionsSection hit the auth-gated API.
-  demoTransactions?: TransactionRow[];
-}) {
+export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
   const TABS: [string, string][] = [
     ["all", "All"],
-    ["capital", capitalLabel],
+    ["capital", "976 Capital"],
     ["personal", "Personal"],
     ["transactions", "Transactions"],
   ];
@@ -161,7 +146,7 @@ export function HoldingsTab({
       </div>
 
       {pf === "transactions" ? (
-        <TransactionsSection holdings={holdings} capitalLabel={capitalLabel} demoTransactions={demoTransactions} />
+        <TransactionsSection holdings={holdings} />
       ) : (
         <>
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, marginTop: 18, overflow: "hidden" }}>
@@ -196,14 +181,14 @@ export function HoldingsTab({
                 padding: "0 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13, color: T.ink,
               }}
             >
-              {/* Ticker bold + blue over the company name in muted text below —
-                  the same stacked-symbol convention Yahoo Finance uses. */}
+              {/* Ticker bold + brand green over the company name in muted text
+                  below — the stacked-symbol convention used across the dashboard. */}
               <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0, overflow: "hidden" }}>
                 {isCash ? (
                   <span style={{ fontWeight: 600 }}>Cash</span>
                 ) : (
                   <>
-                    <span style={{ fontFamily: mono, fontWeight: 700, color: TICKER_BLUE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.sym}>
+                    <span style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.sym}>
                       {formatTicker(h.sym)}
                       {h.sourceCount > 1 && (
                         <span
@@ -233,7 +218,8 @@ export function HoldingsTab({
           <div
             style={{
               display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
-              padding: "0 16px", fontSize: 13, fontWeight: 600, color: T.ink, background: "#F4F7F5",
+              padding: "0 16px", fontSize: 13, fontWeight: 600, color: T.ink,
+              background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`,
             }}
           >
             <div>Total ({sorted.length})</div>
