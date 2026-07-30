@@ -10,26 +10,33 @@ import { formatTicker } from "@/lib/holdings";
 import type { Holding, Portfolio } from "@/lib/types";
 import type { TransactionRow } from "@/app/api/transactions/route";
 
-type SortKey = "name" | "sym" | "cost" | "value" | "pct" | "yld" | "day" | "gain";
+type SortKey = "sym" | "cost" | "value" | "pct" | "yld" | "day" | "gain";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 // sourceCount, not the source list itself — the row shows a merge count, not
 // which institutions hold it, per the "don't show where it's stored" ask.
-type Row = Holding & { gain: number; gainPct: number; pct: number; sourceCount: number };
+// dayAmt is the dollar day change, kept alongside `day` (the % figure
+// Holding already carries) so the Day column can sort on the dollar move
+// rather than the percent one.
+type Row = Holding & { gain: number; gainPct: number; pct: number; dayAmt: number; sourceCount: number };
 
 const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
-  { key: "name", label: "Asset", align: "left" },
-  { key: "sym", label: "Ticker", align: "left" },
+  { key: "sym", label: "Symbol", align: "left" },
   { key: "cost", label: "Cost", align: "right" },
   { key: "value", label: "Value", align: "right" },
-  { key: "pct", label: "%", align: "right" },
+  { key: "pct", label: "Exposure", align: "right" },
   { key: "yld", label: "Yield", align: "right" },
   { key: "day", label: "Day", align: "right" },
   { key: "gain", label: "Total gain", align: "right" },
 ];
-const GRID = "2.05fr 0.75fr 0.9fr 1fr 0.55fr 0.7fr 1.1fr 1.3fr";
+// Symbol gets the extra room for a ticker + company name stack; every other
+// column is the same width.
+const GRID = "2.2fr 1fr 1fr 1fr 1fr 1fr 1fr";
 // Every row is this height regardless of content — a merged multi-source
 // symbol no longer grows a second line, so rows stay uniform.
-const ROW_HEIGHT = 40;
+const ROW_HEIGHT = 44;
+// Matches how Yahoo Finance renders a ticker: bold and blue, with the
+// company name in muted text underneath.
+const TICKER_BLUE = "#2563EB";
 
 export function HoldingsTab({
   holdings,
@@ -91,14 +98,19 @@ export function HoldingsTab({
       gain: h.cls === "Cash" ? 0 : h.value - h.cost,
       gainPct: h.cls === "Cash" ? 0 : ((h.value - h.cost) / h.cost) * 100,
       pct: totalValue ? (h.value / totalValue) * 100 : 0,
+      dayAmt: (h.value * h.day) / 100,
     }));
   }, [holdings, pf]);
 
   const sorted = useMemo(() => {
     const arr = [...merged];
     const { key, dir } = sort;
+    // The Day column sorts by dollar movement, not the % field of the same
+    // name — a small position swinging 5% shouldn't outrank a large one
+    // that moved 1% but by far more money.
     arr.sort((a, b) => {
-      const av = a[key], bv = b[key];
+      const av = key === "day" ? a.dayAmt : a[key];
+      const bv = key === "day" ? b.dayAmt : b[key];
       const cmp = typeof av === "string" ? av.localeCompare(bv as string) : (av as number) - (bv as number);
       return dir === "asc" ? cmp : -cmp;
     });
@@ -112,7 +124,7 @@ export function HoldingsTab({
   // Cash carries cost === value (no gain) and no yield of its own here, so it
   // dilutes rather than distorts these blended figures.
   const totalCost = sorted.reduce((s, h) => s + h.cost, 0);
-  const totalDayAmt = sorted.reduce((s, h) => s + (h.value * h.day) / 100, 0);
+  const totalDayAmt = sorted.reduce((s, h) => s + h.dayAmt, 0);
   const totalDayPct = total ? (totalDayAmt / (total - totalDayAmt)) * 100 : 0;
   const investedCost = sorted.filter((h) => h.cls !== "Cash").reduce((s, h) => s + h.cost, 0);
   const totalGain = sorted.reduce((s, h) => s + h.gain, 0);
@@ -166,7 +178,6 @@ export function HoldingsTab({
           })}
         </div>
         {sorted.map((h, i) => {
-          const dAmt = (h.value * h.day) / 100;
           const isCash = h.cls === "Cash";
           return (
             <div
@@ -174,35 +185,39 @@ export function HoldingsTab({
               className={`row${i % 2 === 1 ? " row-alt" : ""}`}
               style={{
                 display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
-                padding: "0 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13,
+                padding: "0 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13, color: T.ink,
               }}
             >
-              <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.name}>
-                {isCash ? "Cash" : h.name}
-                {h.sourceCount > 1 && (
-                  <span
-                    title={`Combined from ${h.sourceCount} accounts`}
-                    style={{ marginLeft: 6, fontSize: 9, fontFamily: mono, color: T.inkSoft }}
-                  >
-                    ×{h.sourceCount}
-                  </span>
+              {/* Ticker bold + blue over the company name in muted text below —
+                  the same stacked-symbol convention Yahoo Finance uses. */}
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0, overflow: "hidden" }}>
+                {isCash ? (
+                  <span style={{ fontWeight: 600 }}>Cash</span>
+                ) : (
+                  <>
+                    <span style={{ fontFamily: mono, fontWeight: 700, color: TICKER_BLUE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.sym}>
+                      {formatTicker(h.sym)}
+                      {h.sourceCount > 1 && (
+                        <span
+                          title={`Combined from ${h.sourceCount} accounts`}
+                          style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.inkSoft }}
+                        >
+                          ×{h.sourceCount}
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ fontSize: 11.5, color: T.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.name}>
+                      {h.name}
+                    </span>
+                  </>
                 )}
               </div>
-              <div
-                style={{
-                  fontFamily: mono, fontSize: 12, color: h.etf ? T.ledger : T.inkSoft,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}
-                title={isCash ? undefined : h.sym}
-              >
-                {isCash ? "—" : formatTicker(h.sym)}
-              </div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{isCash ? "—" : usd(h.cost)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono }}>{isCash ? "—" : usd(h.cost)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{h.pct.toFixed(1)}%</div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: h.yld > 0 ? T.ink : T.inkSoft }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
-              <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12 }}>—</span> : <Delta pct={h.day} amt={dAmt} size={12} weight={700} />}</div>
-              <div style={{ textAlign: "right" }}>{isCash ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12 }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={12} weight={700} />}</div>
+              <div style={{ textAlign: "right", fontFamily: mono }}>{h.pct.toFixed(1)}%</div>
+              <div style={{ textAlign: "right", fontFamily: mono }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
+              <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.day} amt={h.dayAmt} size={13} weight={700} />}</div>
+              <div style={{ textAlign: "right" }}>{isCash ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={13} weight={700} />}</div>
             </div>
           );
         })}
@@ -210,19 +225,19 @@ export function HoldingsTab({
           <div
             style={{
               display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
-              padding: "0 16px", fontSize: 13, fontWeight: 600, background: "#F4F7F5",
+              padding: "0 16px", fontSize: 13, fontWeight: 600, color: T.ink, background: "#F4F7F5",
             }}
           >
-            <div style={{ gridColumn: "1 / 3" }}>Total ({sorted.length})</div>
-            <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12 }}>{usd(totalCost)}</div>
+            <div>Total ({sorted.length})</div>
+            <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCost)}</div>
             <div style={{ textAlign: "right", fontFamily: mono }}>{usd(total)}</div>
-            <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12 }}>100.0%</div>
-            <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{blendedYld > 0 ? blendedYld.toFixed(2) + "%" : "—"}</div>
+            <div style={{ textAlign: "right", fontFamily: mono }}>100.0%</div>
+            <div style={{ textAlign: "right", fontFamily: mono }}>{blendedYld > 0 ? blendedYld.toFixed(2) + "%" : "—"}</div>
             <div style={{ textAlign: "right" }}>
-              <Delta pct={totalDayPct} amt={totalDayAmt} size={12.5} weight={700} />
+              <Delta pct={totalDayPct} amt={totalDayAmt} size={13} weight={700} />
             </div>
             <div style={{ textAlign: "right" }}>
-              <Delta pct={totalGainPct} amt={totalGain} size={12.5} weight={700} />
+              <Delta pct={totalGainPct} amt={totalGain} size={13} weight={700} />
             </div>
           </div>
         )}
