@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { T, mono, serif, sans } from "@/lib/theme";
 import { sign, usd } from "@/lib/format";
 import { estIrr } from "@/lib/calc";
-import { BASE_HOLDINGS, DEBTS } from "@/lib/data";
+
 import { Delta } from "@/components/ui";
 import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
 import { useDividends } from "@/lib/hooks/useDividends";
 import { useHoldings } from "@/lib/hooks/useHoldings";
+import { useLiabilities } from "@/lib/hooks/useLiabilities";
 
 const TABS: [string, string][] = [
   ["networth", "Net Worth"],
@@ -31,16 +32,17 @@ export default function Home() {
   const { data: quotes } = useQuotes();
   const { data: dividends } = useDividends();
   const { data: holdingsData } = useHoldings();
-
-  // Synced holdings from Supabase; the static seed is only a fallback for
-  // before the first sync (or if the database is unreachable).
-  const base = holdingsData?.holdings?.length ? holdingsData.holdings : BASE_HOLDINGS;
+  const { data: liabilityData } = useLiabilities();
 
   // Reprice qty-based holdings from live quotes; cash stays at its recorded
   // balance. Yield comes from the daily Polygon cache where available.
+  //
+  // Holdings come straight from Supabase with deliberately no seeded fallback —
+  // rendering invented positions when the table is empty or unreachable looks
+  // indistinguishable from real data.
   const holdings = useMemo(
     () =>
-      base.map((h) => {
+      (holdingsData?.holdings ?? []).map((h) => {
         const q = h.qty ? quotes?.quotes[h.sym] : undefined;
         const yld = dividends?.yields[h.sym];
         return {
@@ -50,12 +52,13 @@ export default function Home() {
           yld: yld ?? h.yld,
         };
       }),
-    [base, quotes, dividends]
+    [holdingsData, quotes, dividends]
   );
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const dayAmt = holdings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
   const dayPct = (dayAmt / (total - dayAmt)) * 100;
-  const startNW = total - DEBTS;
+  const debts = (liabilityData?.totalCents ?? 0) / 100;
+  const startNW = total - debts;
   const inv = holdings.filter((h) => h.cls !== "Cash");
   const invVal = inv.reduce((s, h) => s + h.value, 0);
   const invCost = inv.reduce((s, h) => s + h.cost, 0);
@@ -106,7 +109,7 @@ export default function Home() {
         <div style={{ marginTop: 22, display: "flex", alignItems: "flex-end", gap: 22, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontFamily: serif, fontWeight: 600, fontSize: 54, lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
-            <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>net worth · {usd(total)} assets − {usd(DEBTS)} debts</div>
+            <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>net worth · {usd(total)} assets − {usd(debts)} debts</div>
           </div>
           <div style={{ paddingBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
             <div>
@@ -140,7 +143,7 @@ export default function Home() {
           ))}
         </div>
 
-        {tab === "networth" && <NetWorthTab holdings={holdings} lookThrough={lookThrough} setLookThrough={setLookThrough} />}
+        {tab === "networth" && <NetWorthTab holdings={holdings} debts={debts} lookThrough={lookThrough} setLookThrough={setLookThrough} />}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
         {tab === "tracking" && <TrackingTab />}
         {tab === "scenarios" && <ScenarioTab startNW={startNW} />}
@@ -148,9 +151,10 @@ export default function Home() {
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
           Positions come from IBKR Flex and the Brex API; prices are live via Finnhub (stocks/ETFs) and CoinGecko
           (crypto), polled every 60s, with dividend yields from Polygon cached daily. Weekly history is real, imported
-          from the spreadsheet and continued by the Sunday job. Chase and Robinhood are still (est.) estimates until
-          Plaid is connected. Sector and geography are unclassified for holdings the providers don&apos;t label, and
-          ETF look-through uses top-10 approximations.
+          from the spreadsheet and continued by the Sunday job, and debts are maintained in the liabilities table. Chase and
+          Robinhood are absent until Plaid is connected — no estimates stand in for them. Sector and geography read
+          Unclassified where a provider doesn&apos;t label them, and ETF look-through only covers funds with
+          constituent weights on file.
         </div>
       </div>
     </div>

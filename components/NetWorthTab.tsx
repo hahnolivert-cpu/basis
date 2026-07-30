@@ -3,7 +3,7 @@ import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YA
 import { T, mono, serif } from "@/lib/theme";
 import { sign, usd, usdK } from "@/lib/format";
 import { aggregate, mergeBySym, LIQ_TIER } from "@/lib/calc";
-import { DEBTS } from "@/lib/data";
+
 import { toRows } from "@/lib/weekly";
 import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
 import { Card, Eyebrow, Toggle } from "@/components/ui";
@@ -17,10 +17,12 @@ import type { Holding } from "@/lib/types";
 
 export function NetWorthTab({
   holdings,
+  debts,
   lookThrough,
   setLookThrough,
 }: {
   holdings: Holding[];
+  debts: number;
   lookThrough: boolean;
   setLookThrough: (v: boolean) => void;
 }) {
@@ -35,7 +37,7 @@ export function NetWorthTab({
     .filter((h) => h.yld > 0)
     .map((h) => ({ ...h, inc: (h.value * h.yld) / 100 }))
     .sort((a, b) => b.inc - a.inc);
-  const startNW = total - DEBTS;
+  const startNW = total - debts;
   // IBKR reports the Paxos crypto as "BTC.USD-PAXOS"; match either dialect.
   const btcHolding = holdings.find((h) => h.sym.split(/[.\-/]/)[0].toUpperCase() === "BTC");
   const btcPx = btcHolding?.qty ? btcHolding.value / btcHolding.qty : 63817;
@@ -69,10 +71,10 @@ export function NetWorthTab({
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", fontSize: 13.5, color: T.loss }}>
-            <span>Debts</span><span style={{ fontFamily: mono }}>−{usd(DEBTS).slice(1)}</span>
+            <span>Debts</span><span style={{ fontFamily: mono }}>−{usd(debts).slice(1)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0 0", fontSize: 14, fontWeight: 600 }}>
-            <span>Net worth</span><span style={{ fontFamily: mono }}>{usd(total - DEBTS)}</span>
+            <span>Net worth</span><span style={{ fontFamily: mono }}>{usd(total - debts)}</span>
           </div>
         </Card>
 

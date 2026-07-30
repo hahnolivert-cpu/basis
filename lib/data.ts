@@ -49,7 +49,8 @@ export const BASE_HOLDINGS: Holding[] = [
   { sym: "HYPE", qty: 561.34, name: "Hyperliquid · USD", pf: "personal", acct: "Robinhood", cls: "Crypto", value: 23576.44, cost: 18184.95, day: -3.51, sector: "Crypto", geo: "Global", yld: 0 },
 ];
 
-export const DEBTS = 24271;
+// Debts now live in the liabilities table so they can be maintained; see
+// app/api/liabilities and supabase/migrations/*_liabilities.sql.
 
 // Historical EURUSD and BTCUSD closes now live in the weekly_snapshots table
 // (usd_to_eur / btc_price_usd), seeded from the spreadsheet export — see
