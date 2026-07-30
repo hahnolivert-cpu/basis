@@ -6,6 +6,7 @@ import { usd } from "@/lib/format";
 import { Delta } from "@/components/ui";
 import { ManualPositions } from "@/components/ManualPositions";
 import { TransactionsSection } from "@/components/TransactionsSection";
+import { DividendsSection } from "@/components/DividendsSection";
 import { formatTicker } from "@/lib/holdings";
 import type { Holding, Portfolio } from "@/lib/types";
 
@@ -39,8 +40,9 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
     ["capital", "976 Capital"],
     ["personal", "Personal"],
     ["transactions", "Transactions"],
+    ["dividends", "Dividends"],
   ];
-  const [pf, setPf] = useState<"all" | Portfolio | "transactions">("all");
+  const [pf, setPf] = useState<"all" | Portfolio | "transactions" | "dividends">("all");
   const [sort, setSort] = useState<Sort>({ key: "value", dir: "desc" });
 
   // Cash consolidates into a single row regardless of symbol (Brex Treasury,
@@ -48,7 +50,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
   // lines, just the total. Everything else still merges by symbol, so the same
   // stock held at two brokers is one row.
   const merged = useMemo<Row[]>(() => {
-    const rows = pf === "transactions" ? [] : holdings.filter((h) => pf === "all" || h.pf === pf);
+    const rows = pf === "transactions" || pf === "dividends" ? [] : holdings.filter((h) => pf === "all" || h.pf === pf);
     const bySymbol: Record<string, Holding & { sourceCount: number }> = {};
     let cash: (Holding & { sourceCount: number }) | null = null;
 
@@ -130,23 +132,25 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
         {TABS.map(([id, label]) => (
           <button
             key={id}
-            onClick={() => setPf(id as "all" | Portfolio | "transactions")}
+            onClick={() => setPf(id as "all" | Portfolio | "transactions" | "dividends")}
             style={{
               background: "none", border: "none", cursor: "pointer", padding: "8px 14px 12px", fontFamily: "inherit",
-              fontSize: 14, fontWeight: pf === id ? 600 : 400, color: pf === id ? T.ink : T.inkSoft,
+              fontSize: 14, fontWeight: pf === id ? 600 : 400, color: pf === id ? T.ink : T.ink,
               borderBottom: pf === id ? `2px solid ${T.ledger}` : "2px solid transparent", marginBottom: -1,
             }}
           >
             {label}
           </button>
         ))}
-        {pf !== "transactions" && (
-          <div style={{ marginLeft: "auto", alignSelf: "center", fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>{usd(total)}</div>
+        {pf !== "transactions" && pf !== "dividends" && (
+          <div style={{ marginLeft: "auto", alignSelf: "center", fontFamily: mono, fontSize: 12.5, color: T.ink }}>{usd(total)}</div>
         )}
       </div>
 
       {pf === "transactions" ? (
         <TransactionsSection holdings={holdings} />
+      ) : pf === "dividends" ? (
+        <DividendsSection />
       ) : (
         <>
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, marginTop: 18, overflow: "hidden" }}>
@@ -160,7 +164,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                 style={{
                   background: "none", border: "none", cursor: "pointer", padding: "8px 0", fontFamily: "inherit",
                   fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: active ? 700 : 500,
-                  color: active ? T.ledger : T.inkSoft, textAlign: c.align, display: "flex",
+                  color: active ? T.ledger : T.ink, textAlign: c.align, display: "flex",
                   justifyContent: c.align === "right" ? "flex-end" : "flex-start", alignItems: "center", gap: 4,
                 }}
               >
@@ -193,13 +197,13 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                       {h.sourceCount > 1 && (
                         <span
                           title={`Combined from ${h.sourceCount} accounts`}
-                          style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.inkSoft }}
+                          style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.ink }}
                         >
                           ×{h.sourceCount}
                         </span>
                       )}
                     </span>
-                    <span style={{ fontSize: 11.5, color: T.inkSoft, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.name}>
+                    <span style={{ fontSize: 11.5, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.name}>
                       {h.name}
                     </span>
                   </>
@@ -218,13 +222,13 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
           <div
             style={{
               display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
-              padding: "0 16px", fontSize: 13, fontWeight: 600, color: T.ink,
+              padding: "0 16px", fontSize: 13, color: T.ink,
               background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`,
             }}
           >
             <div>Total ({sorted.length})</div>
             <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCost)}</div>
-            <div style={{ textAlign: "right", fontFamily: mono }}>{usd(total)}</div>
+            <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(total)}</div>
             <div style={{ textAlign: "right", fontFamily: mono }}>100.0%</div>
             <div style={{ textAlign: "right", fontFamily: mono }}>{blendedYld > 0 ? blendedYld.toFixed(2) + "%" : "—"}</div>
             <div style={{ textAlign: "right" }}>
