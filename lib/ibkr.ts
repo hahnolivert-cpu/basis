@@ -27,7 +27,7 @@ export type FlexCash = { currency: string; endingCash: number; fxRateToBase: num
 export type FlexTxn = {
   externalId: string;
   date: string; // YYYY-MM-DD
-  type: "buy" | "sell" | "dividend" | "interest" | "transfer";
+  type: "buy" | "sell" | "dividend" | "interest" | "withholding_tax" | "transfer";
   symbol: string | null;
   amount: number; // signed dollars
   description: string;
@@ -79,6 +79,7 @@ function flexDate(v: unknown): string {
 // Returns null for categories we deliberately don't record.
 function cashTxnType(raw: string): FlexTxn["type"] | null {
   const t = raw.toLowerCase();
+  if (t.includes("withholding")) return "withholding_tax";
   if (t.includes("dividend") || t.includes("payment in lieu")) return "dividend";
   if (t.includes("interest")) return "interest";
   if (t.includes("deposit") || t.includes("withdrawal") || t.includes("transfer")) return "transfer";

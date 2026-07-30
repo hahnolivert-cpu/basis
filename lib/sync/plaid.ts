@@ -58,6 +58,7 @@ function mapPlaidInvTxnType(type: string, subtype: string): TxnWrite["type"] | n
   const t = `${type} ${subtype}`.toLowerCase();
   if (t.includes("buy")) return "buy";
   if (t.includes("sell")) return "sell";
+  if (t.includes("withholding")) return "withholding_tax";
   if (t.includes("dividend")) return "dividend";
   if (t.includes("interest")) return "interest";
   if (t.includes("deposit") || t.includes("contribution") || t.includes("withdrawal") || t.includes("distribution") || t.includes("transfer")) return "transfer";
