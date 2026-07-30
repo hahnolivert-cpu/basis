@@ -28,6 +28,24 @@ async function fetchFinnhubQuote(symbol: string, apiKey: string): Promise<Quote 
   return { price: json.c, day: typeof json.dp === "number" ? json.dp : 0 };
 }
 
+// Finnhub's free tier only covers stocks/ETFs — mutual funds (e.g. VFIAX,
+// DFIEX) 403. Yahoo's unofficial chart endpoint has no key and covers mutual
+// fund NAV, so it's the fallback whenever Finnhub has no quote.
+async function fetchYahooQuote(symbol: string): Promise<Quote | null> {
+  const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const json = await res.json();
+  const meta = json?.chart?.result?.[0]?.meta;
+  const price = meta?.regularMarketPrice;
+  const prevClose = meta?.chartPreviousClose ?? meta?.previousClose;
+  if (typeof price !== "number" || price <= 0) return null;
+  const day = typeof prevClose === "number" && prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0;
+  return { price, day };
+}
+
 // Finnhub quotes OANDA:EUR_USD as USD per EUR. Forex requires a paid Finnhub
 // tier, so this returns null on the free plan.
 async function fetchFinnhubEurUsd(apiKey: string): Promise<number | null> {
@@ -97,11 +115,11 @@ export async function getQuotes({ force = false }: { force?: boolean } = {}): Pr
     await Promise.all(
       Array.from(equityWanted.entries()).map(async ([finnhubSymbol, heldAs]) => {
         try {
-          const q = await fetchFinnhubQuote(finnhubSymbol, finnhubKey);
+          const q = (await fetchFinnhubQuote(finnhubSymbol, finnhubKey)) ?? (await fetchYahooQuote(finnhubSymbol).catch(() => null));
           if (q) for (const sym of heldAs) quotes[sym] = q;
-          else errors.push(`Finnhub: no quote for ${finnhubSymbol}`);
+          else errors.push(`no quote for ${finnhubSymbol} (tried Finnhub and Yahoo)`);
         } catch {
-          errors.push(`Finnhub: ${finnhubSymbol} request failed`);
+          errors.push(`${finnhubSymbol} request failed`);
         }
       })
     );

@@ -3,23 +3,120 @@ import type { Holding } from "./types";
 // Static data — seeded from Kubera + Yahoo screenshots.
 // (est.) rows are placeholders sized to match account totals.
 // yld = estimated trailing dividend/interest yield.
+// `top` keys are tickers, not names — TrueExposureCard buckets exposure by
+// ticker so a stock held directly and the same stock held inside an ETF land
+// in the same bar. Keying by company name instead let them silently diverge
+// (a direct MSFT position and "Microsoft" via VOO/SPHQ never merged).
 export const ETF_DATA: Record<string, { sectors: Record<string, number>; geos: Record<string, number>; top: [string, number][] }> = {
   SPHQ: {
     sectors: { Technology: 0.32, Industrials: 0.21, "Health Care": 0.13, Financials: 0.11, "Consumer Disc.": 0.09, "Comm. Services": 0.08, Other: 0.06 }, geos: { "United States": 1.0 },
-    top: [["Apple", 0.058], ["Microsoft", 0.056], ["NVIDIA", 0.055], ["Broadcom", 0.044], ["Eli Lilly", 0.031], ["Mastercard", 0.03], ["Visa", 0.029], ["Alphabet", 0.026], ["Exxon Mobil", 0.024], ["Johnson & Johnson", 0.023]],
+    top: [["AAPL", 0.058], ["MSFT", 0.056], ["NVDA", 0.055], ["AVGO", 0.044], ["LLY", 0.031], ["MA", 0.03], ["V", 0.029], ["GOOGL", 0.026], ["XOM", 0.024], ["JNJ", 0.023]],
   },
   ILF: {
     sectors: { Financials: 0.36, Materials: 0.17, Energy: 0.14, "Consumer Staples": 0.13, Industrials: 0.08, Utilities: 0.07, Other: 0.05 }, geos: { Brazil: 0.58, Mexico: 0.26, Chile: 0.08, Peru: 0.05, Colombia: 0.03 },
-    top: [["Itaú Unibanco", 0.098], ["Vale", 0.086], ["Nubank", 0.079], ["Petrobras", 0.072], ["América Móvil", 0.062], ["Grupo México", 0.045], ["FEMSA", 0.044], ["Banorte", 0.041], ["Credicorp", 0.038], ["B3", 0.033]],
+    top: [["ITUB", 0.098], ["VALE", 0.086], ["NU", 0.079], ["PBR", 0.072], ["AMX", 0.062], ["GMEXICOB", 0.045], ["FMX", 0.044], ["GFNORTEO", 0.041], ["BAP", 0.038], ["B3SA3", 0.033]],
   },
   SGOV: {
     sectors: { "Govt. Bonds": 1.0 }, geos: { "United States": 1.0 },
-    top: [["U.S. Treasury Bills", 1.0]],
+    top: [["USTBILL", 1.0]],
   },
   VOO: {
     sectors: { Technology: 0.33, Financials: 0.13, "Health Care": 0.11, "Consumer Disc.": 0.11, "Comm. Services": 0.09, Industrials: 0.08, Other: 0.15 }, geos: { "United States": 1.0 },
-    top: [["NVIDIA", 0.075], ["Microsoft", 0.068], ["Apple", 0.06], ["Amazon", 0.041], ["Alphabet", 0.04], ["Meta", 0.029], ["Broadcom", 0.024], ["Tesla", 0.019], ["Berkshire Hathaway", 0.016], ["JPMorgan", 0.014]],
+    top: [["NVDA", 0.075], ["MSFT", 0.068], ["AAPL", 0.06], ["AMZN", 0.041], ["GOOGL", 0.04], ["META", 0.029], ["AVGO", 0.024], ["TSLA", 0.019], ["BRK.B", 0.016], ["JPM", 0.014]],
   },
+  // Estimated compositions (same convention as the four funds above) added to
+  // cover funds that previously had no look-through data at all — BIDD/IEMG/
+  // URTH/VGK were falling into "Unclassified" sector and missing Europe/Asia
+  // geography entirely, since a provider-labeled sector/geo never comes back
+  // for them and there was nothing here to fall back on.
+  VGK: {
+    sectors: { Financials: 0.2, "Health Care": 0.14, Industrials: 0.14, "Consumer Staples": 0.1, Technology: 0.08, "Consumer Disc.": 0.08, Materials: 0.07, Energy: 0.06, "Comm. Services": 0.05, Other: 0.08 },
+    geos: { Europe: 1.0 },
+    top: [["ASML", 0.036], ["NVO", 0.028], ["SAP", 0.024], ["NSRGY", 0.022], ["AZN", 0.019], ["SHEL", 0.018], ["LVMUY", 0.016], ["RHHBY", 0.015], ["NVS", 0.014], ["HSBC", 0.013]],
+  },
+  IEMG: {
+    sectors: { Technology: 0.23, Financials: 0.2, "Consumer Disc.": 0.12, "Comm. Services": 0.08, Materials: 0.07, Industrials: 0.06, Energy: 0.05, "Consumer Staples": 0.05, "Health Care": 0.04, Other: 0.1 },
+    geos: { Asia: 0.84, Brazil: 0.06, Other: 0.1 },
+    top: [["TSM", 0.09], ["TCEHY", 0.045], ["BABA", 0.03], ["SSNLF", 0.025], ["HDB", 0.014], ["INFY", 0.012], ["IBN", 0.011], ["PDD", 0.01]],
+  },
+  URTH: {
+    sectors: { Technology: 0.24, Financials: 0.15, "Health Care": 0.1, "Consumer Disc.": 0.1, Industrials: 0.1, "Comm. Services": 0.08, "Consumer Staples": 0.06, Energy: 0.04, Other: 0.13 },
+    geos: { "United States": 0.68, Europe: 0.2, Asia: 0.08, Other: 0.04 },
+    top: [["NVDA", 0.045], ["MSFT", 0.038], ["AAPL", 0.034], ["AMZN", 0.024], ["META", 0.015], ["GOOGL", 0.014], ["AVGO", 0.013], ["TSLA", 0.01], ["NVO", 0.007], ["ASML", 0.006]],
+  },
+  BIDD: {
+    sectors: { Financials: 0.26, Energy: 0.12, Materials: 0.1, Industrials: 0.1, Utilities: 0.09, "Consumer Staples": 0.08, "Health Care": 0.08, "Comm. Services": 0.06, Other: 0.11 },
+    geos: { Europe: 0.55, Asia: 0.35, Other: 0.1 },
+    top: [["HSBC", 0.04], ["RIO", 0.035], ["SHEL", 0.03], ["BHP", 0.028], ["TTE", 0.024], ["VOD", 0.02], ["MUFG", 0.018], ["TM", 0.016], ["SAN", 0.015], ["NABZY", 0.012]],
+  },
+};
+
+// Continents for the "Geography — true exposure" chart, which groups by
+// continent rather than raw country so the composition chart doesn't
+// fragment into one sliver per country. Falls back to the raw geo string
+// when a value isn't listed, so nothing silently disappears.
+export const CONTINENT_BY_GEO: Record<string, string> = {
+  "United States": "North America",
+  Mexico: "North America",
+  Brazil: "South America",
+  Chile: "South America",
+  Peru: "South America",
+  Colombia: "South America",
+  Global: "Crypto / Global",
+};
+
+// Per-symbol sector/geo, applied only when a provider didn't supply its own
+// (mapRow does `r.sector ?? SECTOR_BY_SYMBOL[...]`) — this never overrides
+// real provider data, it just replaces "Unclassified" with a real answer for
+// symbols we can identify with reasonable confidence. Options resolve to
+// their underlying first (see underlyingSymbol in lib/holdings.ts), so an
+// entry here for e.g. BMNR also classifies a BMNR call option.
+//
+// Deliberately incomplete: a thinly-traded/unfamiliar ticker (e.g. the GLNK
+// option underlying held this session) is left out rather than guessed at —
+// "Unclassified" is honest, a wrong sector isn't.
+export const SECTOR_BY_SYMBOL: Record<string, string> = {
+  AMZN: "Consumer Disc.",
+  GOOGL: "Comm. Services",
+  MSFT: "Technology",
+  NOW: "Technology",
+  MSTR: "Technology",
+  STRC: "Technology",
+  QBTS: "Technology",
+  BMNR: "Technology",
+  TTD: "Comm. Services",
+  "BRK.B": "Financials",
+  "BRK B": "Financials",
+  HOOD: "Financials",
+  COIN: "Financials",
+  V: "Financials",
+  PURR: "Financials",
+  NVO: "Health Care",
+  MCD: "Consumer Disc.",
+  MELI: "Consumer Disc.",
+  PG: "Consumer Staples",
+};
+
+export const GEO_BY_SYMBOL: Record<string, string> = {
+  AMZN: "United States",
+  GOOGL: "United States",
+  MSFT: "United States",
+  NOW: "United States",
+  MSTR: "United States",
+  STRC: "United States",
+  QBTS: "United States",
+  BMNR: "United States",
+  TTD: "United States",
+  "BRK.B": "United States",
+  "BRK B": "United States",
+  HOOD: "United States",
+  COIN: "United States",
+  V: "United States",
+  PURR: "United States",
+  MCD: "United States",
+  PG: "United States",
+  NVO: "Europe",
+  MELI: "South America",
 };
 
 // qty = share/coin count implied by screenshot values; live sync (future) reprices qty x price.
