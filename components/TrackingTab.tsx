@@ -137,13 +137,12 @@ export function TrackingTab() {
     );
   }
 
-  const latest = rows.at(-1)!;
   const autoCount = rows.filter((r) => r.source === "auto").length;
 
   return (
     <div>
       <WeeklyTotalCard rows={rows} />
-      <GoalProgressCard total={latest.total} />
+      <GoalProgressCard rows={rows} />
       <AllocationHistoryCard rows={rows} />
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 30, marginBottom: 2 }}>Weekly detail</div>
       <div style={{ fontSize: 12, color: T.inkSoft }}>

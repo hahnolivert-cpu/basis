@@ -1,9 +1,11 @@
 import { T, mono, serif } from "@/lib/theme";
 import { usd, usdK } from "@/lib/format";
-import { GOALS } from "@/lib/weekly";
+import { GOALS, weeksToGoal, etaLabel, type WeeklyRow } from "@/lib/weekly";
 import { Card, Eyebrow } from "@/components/ui";
 
-export function GoalProgressCard({ total }: { total: number }) {
+export function GoalProgressCard({ rows }: { rows: WeeklyRow[] }) {
+  const latest = rows[rows.length - 1];
+  const total = latest.total;
   return (
     <Card style={{ marginTop: 16 }}>
       <Eyebrow>Goal progress</Eyebrow>
@@ -11,6 +13,7 @@ export function GoalProgressCard({ total }: { total: number }) {
         {GOALS.map((goal) => {
           const pct = (total / goal) * 100;
           const achieved = total >= goal;
+          const weeks = achieved ? null : weeksToGoal(rows, goal);
           return (
             <div key={goal}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12.5, marginBottom: 5 }}>
@@ -21,6 +24,9 @@ export function GoalProgressCard({ total }: { total: number }) {
                   ) : (
                     <>
                       {pct.toFixed(1)}% <span style={{ opacity: 0.75 }}>· {usd(goal - total)} to go</span>
+                      {weeks !== null && (
+                        <span style={{ color: T.ledger, marginLeft: 8 }}>{etaLabel(weeks, latest.date)}</span>
+                      )}
                     </>
                   )}
                 </span>
@@ -40,7 +46,8 @@ export function GoalProgressCard({ total }: { total: number }) {
         })}
       </div>
       <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12 }}>
-        Measured against the latest weekly close of {usd(total)}.
+        Measured against the latest weekly close of {usd(total)}. Estimated dates project the trailing
+        compound weekly growth rate across all recorded weeks — not a guarantee.
       </div>
     </Card>
   );
