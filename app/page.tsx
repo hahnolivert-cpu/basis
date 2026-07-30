@@ -81,6 +81,15 @@ export default function Home() {
             <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>
               {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
             </span>
+            <a
+              href="/link"
+              style={{
+                fontSize: 12, color: T.inkSoft, fontFamily: mono, textDecoration: "none",
+                border: `1px solid ${T.line}`, borderRadius: 999, padding: "6px 13px",
+              }}
+            >
+              + Connect
+            </a>
             <SyncButton />
             <button
               onClick={handleSignOut}
