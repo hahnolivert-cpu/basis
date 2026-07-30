@@ -47,7 +47,7 @@ export default function DemoPage() {
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
             <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
             <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
-              Ascendia
+              Ascentic
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

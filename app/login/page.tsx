@@ -76,7 +76,7 @@ export default function LoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 32px mark */}
           <img src="/logo.png" alt="" width={32} height={32} style={{ display: "block", margin: "0 auto 10px" }} />
           <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
-            Ascendia
+            Ascentic
           </div>
           <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 600, marginTop: 10 }}>
             {mode === "signin" ? "Sign in" : "Create account"}
