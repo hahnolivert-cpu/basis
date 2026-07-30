@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
 import { T, mono, serif } from "@/lib/theme";
 import { usd, usdK } from "@/lib/format";
@@ -8,6 +8,7 @@ import { fvCalc, reqMonthly, reqReturn, subclass } from "@/lib/calc";
 import { Card } from "@/components/ui";
 import { ChartTip } from "@/components/charts/ChartTip";
 import { CompositionForecastCard, type CompositionPoint } from "@/components/charts/CompositionForecastCard";
+import { usePersistedState } from "@/lib/hooks/usePersistedState";
 import type { Holding } from "@/lib/types";
 
 const TARGETS = [3e6, 5e6, 10e6, 20e6];
@@ -19,12 +20,15 @@ const BUCKETS = ["Crypto", "Stocks", "ETFs", "Cash"] as const;
 type Bucket = (typeof BUCKETS)[number];
 const BUCKET_COLOR: Record<Bucket, string> = { Crypto: "#C09A5B", Stocks: T.ledger, ETFs: "#6E9D8D", Cash: "#2F4858" };
 
+// Every input on this tab is remembered across visits (localStorage) — it's
+// a planning worksheet, not a one-off calculator, so re-typing the same
+// assumptions on every reload would be pure friction.
 export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdings?: Holding[] }) {
-  const [mode, setMode] = useState<"monthly" | "return">("monthly");
-  const [assumedReturn, setAssumedReturn] = useState(7);
-  const [assumedMonthly, setAssumedMonthly] = useState(5000);
-  const [planMonthly, setPlanMonthly] = useState(5000);
-  const [planReturn, setPlanReturn] = useState(7);
+  const [mode, setMode] = usePersistedState<"monthly" | "return">("basis:scenario:mode", "monthly");
+  const [assumedReturn, setAssumedReturn] = usePersistedState("basis:scenario:assumedReturn", 7);
+  const [assumedMonthly, setAssumedMonthly] = usePersistedState("basis:scenario:assumedMonthly", 5000);
+  const [planMonthly, setPlanMonthly] = usePersistedState("basis:scenario:planMonthly", 5000);
+  const [planReturn, setPlanReturn] = usePersistedState("basis:scenario:planReturn", 7);
 
   // "Status quo" starting point for the composition forecast — today's actual
   // holdings, bucketed the same way the Asset Class chart on the Net Worth
@@ -38,8 +42,14 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
     return totals;
   }, [holdings]);
 
-  const [monthlyByBucket, setMonthlyByBucket] = useState<Record<Bucket, number>>({ Crypto: 500, Stocks: 1000, ETFs: 1500, Cash: 200 });
-  const [returnByBucket, setReturnByBucket] = useState<Record<Bucket, number>>({ Crypto: 15, Stocks: 8, ETFs: 7, Cash: 4 });
+  const [monthlyByBucket, setMonthlyByBucket] = usePersistedState<Record<Bucket, number>>(
+    "basis:scenario:monthlyByBucket",
+    { Crypto: 500, Stocks: 1000, ETFs: 1500, Cash: 200 }
+  );
+  const [returnByBucket, setReturnByBucket] = usePersistedState<Record<Bucket, number>>(
+    "basis:scenario:returnByBucket",
+    { Crypto: 15, Stocks: 8, ETFs: 7, Cash: 4 }
+  );
 
   const compositionForecast = useMemo(() => {
     const bal: Record<Bucket, number> = { ...statusQuo };
