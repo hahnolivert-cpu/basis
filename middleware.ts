@@ -9,12 +9,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // Public demo: fake data only, no session required, viewable by anyone
-  // with the link.
-  if (request.nextUrl.pathname.startsWith("/demo")) {
-    return NextResponse.next({ request });
-  }
-
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

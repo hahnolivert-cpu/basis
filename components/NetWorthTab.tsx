@@ -15,7 +15,7 @@ import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard
 import { TrueExposureCard } from "@/components/charts/TrueExposureCard";
 import { NetWorthFlowCard } from "@/components/charts/NetWorthFlowCard";
 import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
-import type { Holding, WeeklySnapshot } from "@/lib/types";
+import type { Holding } from "@/lib/types";
 import type { Liability } from "@/app/api/liabilities/route";
 
 type Drilldown = { title: string; dim: "class" | "sector" | "geo"; keys: string[] };
@@ -26,20 +26,12 @@ export function NetWorthTab({
   liabilities,
   lookThrough,
   setLookThrough,
-  capitalLabel = "976 Capital",
-  demoSnapshots,
 }: {
   holdings: Holding[];
   debts: number;
   liabilities: Liability[];
   lookThrough: boolean;
   setLookThrough: (v: boolean) => void;
-  // Overridable so the demo page can show a generic name instead of the
-  // real entity's.
-  capitalLabel?: string;
-  // The demo page has no session, so it injects static weekly history
-  // instead of letting useWeeklySnapshots hit the auth-gated API.
-  demoSnapshots?: WeeklySnapshot[];
 }) {
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const capital = holdings.filter((h) => h.pf === "capital").reduce((s, h) => s + h.value, 0);
@@ -94,8 +86,8 @@ export function NetWorthTab({
 
   // Real weekly history from weekly_snapshots — the evolution and allocation
   // charts were previously drawn from mock arrays in lib/data.ts.
-  const { data: weekly } = useWeeklySnapshots({ enabled: !demoSnapshots });
-  const weeklyRows = useMemo(() => toRows(demoSnapshots ?? weekly?.snapshots ?? []), [demoSnapshots, weekly]);
+  const { data: weekly } = useWeeklySnapshots();
+  const weeklyRows = useMemo(() => toRows(weekly?.snapshots ?? []), [weekly]);
 
   return (
     <div>
@@ -109,7 +101,7 @@ export function NetWorthTab({
           </div>
           {(
             [
-              [capitalLabel, capital, T.ledger],
+              ["976 Capital", capital, T.ledger],
               ["Personal", personal, "#C09A5B"],
             ] as [string, number, string][]
           ).map(([n, v, c]) => (
@@ -149,7 +141,7 @@ export function NetWorthTab({
         </Card>
       </div>
 
-      <NetWorthFlowCard holdings={holdings} debts={debts} capitalLabel={capitalLabel} />
+      <NetWorthFlowCard holdings={holdings} debts={debts} />
 
       {/* Net worth evolution — real weekly closes */}
       <Card style={{ marginTop: 16 }}>
@@ -186,7 +178,7 @@ export function NetWorthTab({
           </div>
         )}
       </Card>
-      <CurrencyLensCard startNW={startNW} btcPx={btcPx} demoSnapshots={demoSnapshots} />
+      <CurrencyLensCard startNW={startNW} btcPx={btcPx} />
 
       {/* Composition */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 30, marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
