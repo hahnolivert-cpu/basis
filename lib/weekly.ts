@@ -26,21 +26,22 @@ export function monthLabel(date: string): string {
   return `${MONTHS[Number(m) - 1]} ${y.slice(2)}`;
 }
 
-// Weeks until `goal` is reached, projecting the trailing compound weekly
-// growth rate across the full weekly history forward. Returns null when
-// there's nothing to project: too little history, or a flat/negative trend
-// — an ETA on a shrinking portfolio would be a fabricated number, not just
-// an optimistic one.
+// Weeks until `goal` is reached, projecting the trailing average *dollar*
+// change per week (not a compound growth rate) forward at a constant pace.
+// A $/week pace is more legible against a volatile, crypto-heavy portfolio
+// than a % growth rate, which can swing wildly week to week. Returns null
+// when there's nothing to project: too little history, or a flat/negative
+// trend — an ETA on a shrinking portfolio would be a fabricated number, not
+// just an optimistic one.
 export function weeksToGoal(rows: WeeklyRow[], goal: number): number | null {
   if (rows.length < 2) return null;
   const first = rows[0].total;
   const latest = rows[rows.length - 1].total;
   if (latest >= goal) return 0;
-  if (first <= 0 || latest <= 0) return null;
   const weeks = rows.length - 1;
-  const weeklyGrowth = Math.pow(latest / first, 1 / weeks) - 1;
-  if (weeklyGrowth <= 0) return null;
-  return Math.log(goal / latest) / Math.log(1 + weeklyGrowth);
+  const avgWeeklyChange = (latest - first) / weeks;
+  if (avgWeeklyChange <= 0) return null;
+  return (goal - latest) / avgWeeklyChange;
 }
 
 // "~2.3 yrs · Nov 2028" from a week count and the date it's counted from.

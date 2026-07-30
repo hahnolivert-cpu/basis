@@ -47,7 +47,7 @@ export function GoalProgressCard({ rows }: { rows: WeeklyRow[] }) {
       </div>
       <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12 }}>
         Measured against the latest weekly close of {usd(total)}. Estimated dates project the trailing
-        compound weekly growth rate across all recorded weeks — not a guarantee.
+        average dollar change per week across all recorded weeks — not a guarantee.
       </div>
     </Card>
   );
