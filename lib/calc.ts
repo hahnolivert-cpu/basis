@@ -85,6 +85,7 @@ export const mergeBySym = (hs: Holding[]): Holding[] => {
     m.day = newValue ? (m.day * m.value + h.day * h.value) / newValue : 0;
     m.value = newValue;
     m.cost += h.cost;
+    m.qty = (m.qty ?? 0) + (h.qty ?? 0);
   }
   return Object.values(map);
 };
