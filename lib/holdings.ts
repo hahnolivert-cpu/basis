@@ -29,6 +29,7 @@ export const CRYPTO_BASES: Record<string, string> = {
   SOL: "solana",
   LINK: "chainlink",
   HYPE: "hyperliquid",
+  ONDO: "ondo-finance",
 };
 
 export type QuoteRef = { type: "crypto"; id: string } | { type: "equity"; symbol: string } | null;

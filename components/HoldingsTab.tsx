@@ -107,10 +107,18 @@ export function HoldingsTab({
     const { key, dir } = sort;
     // The Day column sorts by dollar movement, not the % field of the same
     // name — a small position swinging 5% shouldn't outrank a large one
-    // that moved 1% but by far more money.
+    // that moved 1% but by far more money. Rows with no live day change
+    // (h.day === 0 — no quote source, e.g. cash or an unmapped crypto)
+    // render as "—" rather than a number, so they always sort last instead
+    // of landing in the middle of the ranking as a false zero.
     arr.sort((a, b) => {
-      const av = key === "day" ? a.dayAmt : a[key];
-      const bv = key === "day" ? b.dayAmt : b[key];
+      if (key === "day") {
+        const aNo = a.day === 0, bNo = b.day === 0;
+        if (aNo !== bNo) return aNo ? 1 : -1;
+        const cmp = a.dayAmt - b.dayAmt;
+        return dir === "asc" ? cmp : -cmp;
+      }
+      const av = a[key], bv = b[key];
       const cmp = typeof av === "string" ? av.localeCompare(bv as string) : (av as number) - (bv as number);
       return dir === "asc" ? cmp : -cmp;
     });
