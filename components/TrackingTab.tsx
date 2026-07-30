@@ -112,11 +112,14 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
   );
 }
 
-export function TrackingTab() {
-  const { data, isLoading } = useWeeklySnapshots();
-  const rows = useMemo(() => toRows(data?.snapshots ?? []), [data]);
+export function TrackingTab({ demoRows }: { demoRows?: WeeklyRow[] } = {}) {
+  // The demo page has no session, so it can't hit the real (auth-gated)
+  // API — it injects its own static rows instead and skips the hook
+  // entirely rather than letting a 401 render as "no weekly history yet".
+  const { data, isLoading } = useWeeklySnapshots({ enabled: !demoRows });
+  const rows = useMemo(() => demoRows ?? toRows(data?.snapshots ?? []), [demoRows, data]);
 
-  if (isLoading) {
+  if (!demoRows && isLoading) {
     return (
       <Card style={{ marginTop: 22 }}>
         <div style={{ fontSize: 13, color: T.inkSoft, fontFamily: mono }}>Loading weekly history…</div>

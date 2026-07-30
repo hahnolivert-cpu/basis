@@ -1,15 +1,29 @@
+import type { ReactNode } from "react";
 import { T, mono, serif } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { mergeBySym } from "@/lib/calc";
 import { Card, Eyebrow } from "@/components/ui";
 import type { Holding } from "@/lib/types";
 
-export function ConcentrationCard({ holdings, total }: { holdings: Holding[]; total: number }) {
+export function ConcentrationCard({
+  holdings,
+  total,
+  headerRight,
+}: {
+  holdings: Holding[];
+  total: number;
+  // Crypto/Cash include toggles, rendered next to the title like every
+  // other composition chart on this tab.
+  headerRight?: ReactNode;
+}) {
   const top = mergeBySym(holdings).sort((a, b) => b.value - a.value).slice(0, 10);
   const share = top.reduce((s, h) => s + h.value, 0) / total;
   return (
     <Card style={{ flex: 1, minWidth: 300 }}>
-      <Eyebrow>Concentration</Eyebrow>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Eyebrow>Concentration</Eyebrow>
+        {headerRight}
+      </div>
       <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 600 }}>
         {(share * 100).toFixed(0)}%
         <span style={{ fontSize: 14, color: T.inkSoft, fontFamily: "'Inter', sans-serif", fontWeight: 400 }}> of assets in top 10 positions</span>

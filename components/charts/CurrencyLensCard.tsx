@@ -4,6 +4,7 @@ import { fmt, usd } from "@/lib/format";
 import { Card, Eyebrow } from "@/components/ui";
 import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
 import { monthLabel } from "@/lib/weekly";
+import type { WeeklySnapshot } from "@/lib/types";
 
 const LINES: [string, string][] = [
   ["USD", T.ledger],
@@ -11,9 +12,17 @@ const LINES: [string, string][] = [
   ["BTC", "#C09A5B"],
 ];
 
-export function CurrencyLensCard({ startNW, btcPx }: { startNW: number; btcPx: number }) {
-  const { data: weekly } = useWeeklySnapshots();
-  const snapshots = weekly?.snapshots ?? [];
+export function CurrencyLensCard({
+  startNW,
+  btcPx,
+  demoSnapshots,
+}: {
+  startNW: number;
+  btcPx: number;
+  demoSnapshots?: WeeklySnapshot[];
+}) {
+  const { data: weekly } = useWeeklySnapshots({ enabled: !demoSnapshots });
+  const snapshots = demoSnapshots ?? weekly?.snapshots ?? [];
 
   // Each series is indexed to 100 at the first week, so the lines answer
   // "how has wealth grown measured in this unit" rather than tracking the

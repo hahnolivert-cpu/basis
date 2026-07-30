@@ -16,7 +16,7 @@ export function SignedBarCard({
   return (
     <Card style={{ flex: 1, minWidth: 300 }}>
       <Eyebrow>{title}</Eyebrow>
-      <div style={{ height: 200 }}>
+      <div style={{ height: Math.max(200, rows.length * 32) }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} layout="vertical" margin={{ left: 10, right: 46 }}>
             <XAxis type="number" hide />

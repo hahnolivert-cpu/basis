@@ -5,7 +5,7 @@ import { subclass } from "@/lib/calc";
 import { Card, Eyebrow } from "@/components/ui";
 import type { Holding, Portfolio } from "@/lib/types";
 
-const PF_LABEL: Record<Portfolio, string> = { capital: "976 Capital", personal: "Personal" };
+const DEFAULT_PF_LABEL: Record<Portfolio, string> = { capital: "976 Capital", personal: "Personal" };
 const PF_COLOR: Record<Portfolio, string> = { capital: T.ledger, personal: "#C09A5B" };
 const PF_ORDER: Portfolio[] = ["capital", "personal"];
 const BUCKET_COLOR: Record<string, string> = {
@@ -27,7 +27,7 @@ function bucketFor(h: Holding): string {
 
 type Node = { name: string; color: string };
 
-function buildSankey(holdings: Holding[], debts: number) {
+function buildSankey(holdings: Holding[], debts: number, pfLabel: Record<Portfolio, string>) {
   const nodes: Node[] = [];
   const nodeIndexOf: Record<string, number> = {};
   const addNode = (key: string, name: string, color: string) => {
@@ -47,7 +47,7 @@ function buildSankey(holdings: Holding[], debts: number) {
     const buckets = new Map<string, number>();
     for (const h of pfHoldings) buckets.set(bucketFor(h), (buckets.get(bucketFor(h)) ?? 0) + h.value);
 
-    const pfNode = addNode(`pf:${pf}`, PF_LABEL[pf], PF_COLOR[pf]);
+    const pfNode = addNode(`pf:${pf}`, pfLabel[pf], PF_COLOR[pf]);
     Array.from(buckets.entries()).forEach(([bucket, value]) => {
       if (value <= 0) return;
       const bNode = addNode(`${pf}:${bucket}`, bucket, BUCKET_COLOR[bucket] ?? T.inkSoft);
@@ -122,8 +122,17 @@ function FlowNode({ nodes, x, y, width, height, index, payload }: SankeyNodeProp
   );
 }
 
-export function NetWorthFlowCard({ holdings, debts }: { holdings: Holding[]; debts: number }) {
-  const { nodes, links } = buildSankey(holdings, debts);
+export function NetWorthFlowCard({
+  holdings,
+  debts,
+  capitalLabel = "976 Capital",
+}: {
+  holdings: Holding[];
+  debts: number;
+  capitalLabel?: string;
+}) {
+  const pfLabel = { ...DEFAULT_PF_LABEL, capital: capitalLabel };
+  const { nodes, links } = buildSankey(holdings, debts, pfLabel);
   if (nodes.length === 0 || links.length === 0) return null;
 
   return (

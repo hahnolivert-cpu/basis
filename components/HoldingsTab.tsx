@@ -27,13 +27,13 @@ const GRID = "2.1fr 0.75fr 0.9fr 1fr 0.7fr 1.1fr 1.3fr";
 // Every row is this height regardless of content — a merged multi-source
 // symbol no longer grows a second line, so rows stay uniform.
 const ROW_HEIGHT = 40;
-const TABS: [string, string][] = [
-  ["all", "All"],
-  ["capital", "976 Capital"],
-  ["personal", "Personal"],
-];
 
-export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
+export function HoldingsTab({ holdings, capitalLabel = "976 Capital" }: { holdings: Holding[]; capitalLabel?: string }) {
+  const TABS: [string, string][] = [
+    ["all", "All"],
+    ["capital", capitalLabel],
+    ["personal", "Personal"],
+  ];
   const [pf, setPf] = useState<"all" | Portfolio>("all");
   const [sort, setSort] = useState<Sort>({ key: "value", dir: "desc" });
   const rows = holdings.filter((h) => pf === "all" || h.pf === pf);

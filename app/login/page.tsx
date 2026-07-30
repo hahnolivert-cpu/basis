@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { T, mono, serif, sans } from "@/lib/theme";
 import { Card } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -149,6 +150,12 @@ export default function LoginPage() {
             </button>
           </form>
         </Card>
+
+        <div style={{ textAlign: "center", marginTop: 18 }}>
+          <Link href="/demo" style={{ fontSize: 12.5, color: T.inkSoft, fontFamily: mono, textDecoration: "none" }}>
+            View demo →
+          </Link>
+        </div>
       </div>
     </div>
   );
