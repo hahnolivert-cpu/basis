@@ -2,9 +2,24 @@ import type { CSSProperties, ReactNode } from "react";
 import { T, mono } from "@/lib/theme";
 import { sign, usd } from "@/lib/format";
 
-export function Delta({ pct, amt, size = 13, weight }: { pct: number; amt: number; size?: number; weight?: number }) {
+// `stacked` forces the $ amount and the (%) onto their own lines. Without it,
+// the space between them is a normal line-break opportunity — whether a cell
+// wraps to one line or two then depends on the text's own width relative to
+// the column, so a table of these ends up with rows misaligned against each
+// other for no visible reason. Opt-in rather than the default so it only
+// changes layouts that ask for it.
+export function Delta({ pct, amt, size = 13, weight, stacked }: { pct: number; amt: number; size?: number; weight?: number; stacked?: boolean }) {
+  const color = pct >= 0 ? T.gain : T.loss;
+  if (stacked) {
+    return (
+      <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1.4, color, fontFamily: mono, fontSize: size, fontWeight: weight }}>
+        <span>{sign(amt, usd(amt))}</span>
+        <span style={{ opacity: 0.75 }}>({sign(pct, pct.toFixed(2))}%)</span>
+      </span>
+    );
+  }
   return (
-    <span style={{ color: pct >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: size, fontWeight: weight }}>
+    <span style={{ color, fontFamily: mono, fontSize: size, fontWeight: weight }}>
       {sign(amt, usd(amt))} <span style={{ opacity: 0.75 }}>({sign(pct, pct.toFixed(2))}%)</span>
     </span>
   );

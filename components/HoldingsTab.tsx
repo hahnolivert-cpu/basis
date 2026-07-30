@@ -216,8 +216,8 @@ export function HoldingsTab({
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</div>
               <div style={{ textAlign: "right", fontFamily: mono }}>{h.pct.toFixed(1)}%</div>
               <div style={{ textAlign: "right", fontFamily: mono }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
-              <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.day} amt={h.dayAmt} size={13} weight={700} />}</div>
-              <div style={{ textAlign: "right" }}>{isCash ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={13} weight={700} />}</div>
+              <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.day} amt={h.dayAmt} size={13} weight={700} stacked />}</div>
+              <div style={{ textAlign: "right" }}>{isCash ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={13} weight={700} stacked />}</div>
             </div>
           );
         })}
@@ -234,10 +234,10 @@ export function HoldingsTab({
             <div style={{ textAlign: "right", fontFamily: mono }}>100.0%</div>
             <div style={{ textAlign: "right", fontFamily: mono }}>{blendedYld > 0 ? blendedYld.toFixed(2) + "%" : "—"}</div>
             <div style={{ textAlign: "right" }}>
-              <Delta pct={totalDayPct} amt={totalDayAmt} size={13} weight={700} />
+              <Delta pct={totalDayPct} amt={totalDayAmt} size={13} weight={700} stacked />
             </div>
             <div style={{ textAlign: "right" }}>
-              <Delta pct={totalGainPct} amt={totalGain} size={13} weight={700} />
+              <Delta pct={totalGainPct} amt={totalGain} size={13} weight={700} stacked />
             </div>
           </div>
         )}
