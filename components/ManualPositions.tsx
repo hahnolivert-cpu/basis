@@ -28,7 +28,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: 10.5,
   letterSpacing: "0.1em",
   textTransform: "uppercase",
-  color: T.inkSoft,
+  color: T.ink,
   marginBottom: 5,
   display: "block",
 };
@@ -104,7 +104,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10 }}>
         <div>
           <Eyebrow style={{ marginBottom: 2 }}>Manual positions</Eyebrow>
-          <div style={{ fontSize: 12, color: T.inkSoft }}>
+          <div style={{ fontSize: 12, color: T.ink }}>
             Self-custody assets no sync can see — hardware wallet coins and the like. Priced live where a quote exists;
             provider syncs never touch these.
           </div>
@@ -193,12 +193,12 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
             >
               <span>
                 <span style={{ fontWeight: 600 }}>{h.sym}</span>
-                <span style={{ color: T.inkSoft, fontSize: 11.5, marginLeft: 8 }}>
+                <span style={{ color: T.ink, fontSize: 11.5, marginLeft: 8 }}>
                   {h.name} · {h.acct}
                 </span>
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
-                <span style={{ fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{h.qty}</span>
+                <span style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{h.qty}</span>
                 <span style={{ fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</span>
                 <button
                   onClick={() => remove(h.sym)}
@@ -218,7 +218,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
       )}
 
       {manual.length === 0 && !open && (
-        <div style={{ marginTop: 14, fontFamily: serif, fontSize: 15, color: T.inkSoft }}>
+        <div style={{ marginTop: 14, fontFamily: serif, fontSize: 15, color: T.ink }}>
           Nothing added yet.
         </div>
       )}

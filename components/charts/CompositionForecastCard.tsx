@@ -37,12 +37,12 @@ export function CompositionForecastCard({
               omitted in dollar mode so the bands' real size is what's plotted. */}
           <AreaChart data={points} stackOffset={mode === "pct" ? "expand" : undefined} margin={{ left: 8, right: 8, top: 6 }}>
             <CartesianGrid stroke={T.line} vertical={false} />
-            <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={3} />
+            <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={3} />
             <YAxis
               tickFormatter={mode === "pct" ? (v: number) => `${Math.round(v * 100)}%` : usdK}
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }}
+              tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }}
               width={mode === "pct" ? 44 : 52}
             />
             <Tooltip
@@ -79,12 +79,12 @@ export function CompositionForecastCard({
       </div>
       <div style={{ marginTop: 8, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "baseline" }}>
         {bands.map(([k, color]) => (
-          <span key={k} style={{ fontSize: 11, color: T.inkSoft, fontFamily: mono, display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <span key={k} style={{ fontSize: 11, color: T.ink, fontFamily: mono, display: "inline-flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
             {k}
           </span>
         ))}
-        {caption && <span style={{ fontSize: 11, color: T.inkSoft, marginLeft: "auto" }}>{caption}</span>}
+        {caption && <span style={{ fontSize: 11, color: T.ink, marginLeft: "auto" }}>{caption}</span>}
       </div>
     </Card>
   );

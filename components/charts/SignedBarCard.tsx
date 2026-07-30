@@ -66,7 +66,7 @@ export function SignedBarCard({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} layout="vertical" margin={{ left: 10, right: 16 }}>
             <XAxis type="number" hide />
-            <YAxis type="category" dataKey="name" width={66} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: T.inkSoft, fontFamily: mono }} />
+            <YAxis type="category" dataKey="name" width={66} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: T.ink, fontFamily: mono }} />
             <Tooltip
               cursor={{ fill: "rgba(14,91,67,0.06)" }}
               content={({ active, payload }) => {
@@ -89,7 +89,7 @@ export function SignedBarCard({
           </BarChart>
         </ResponsiveContainer>
       </div>
-      {note && <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 6 }}>{note}</div>}
+      {note && <div style={{ fontSize: 11.5, color: T.ink, marginTop: 6 }}>{note}</div>}
     </Card>
   );
 }

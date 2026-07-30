@@ -42,13 +42,13 @@ export function CurrencyLensCard({ startNW, btcPx }: { startNW: number; btcPx: n
     <Card style={{ marginTop: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
         <Eyebrow style={{ marginBottom: 0 }}>Net worth through three lenses · indexed to 100</Eyebrow>
-        <div style={{ fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>
+        <div style={{ fontFamily: mono, fontSize: 12.5, color: T.ink }}>
           {usd(startNW)}
           {eurNow !== null && <> · €{fmt(eurNow)}</>} · ₿{btcNow.toFixed(2)}
         </div>
       </div>
       {data.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: T.inkSoft, marginTop: 12, fontFamily: mono }}>
+        <div style={{ fontSize: 12.5, color: T.ink, marginTop: 12, fontFamily: mono }}>
           Awaiting weekly history — see the Tracking tab.
         </div>
       ) : (
@@ -57,8 +57,8 @@ export function CurrencyLensCard({ startNW, btcPx }: { startNW: number; btcPx: n
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ left: 8, right: 8, top: 6 }}>
                 <CartesianGrid stroke={T.line} vertical={false} />
-                <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={6} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} width={40} domain={["auto", "auto"]} />
+                <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} width={40} domain={["auto", "auto"]} />
                 <Tooltip
                   formatter={(v, n) => [v, n]}
                   labelFormatter={(_, p) => p?.[0]?.payload?.date ?? ""}
@@ -72,7 +72,7 @@ export function CurrencyLensCard({ startNW, btcPx }: { startNW: number; btcPx: n
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: T.inkSoft, fontFamily: mono, flexWrap: "wrap" }}>
+          <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: T.ink, fontFamily: mono, flexWrap: "wrap" }}>
             {LINES.map(([k, c]) => (
               <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                 <span style={{ width: 12, height: 3, borderRadius: 2, background: c }} />{k}-denominated

@@ -103,7 +103,7 @@ export function TrueExposureCard({ holdings, netWorth }: { holdings: MaybeFund[]
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 46 }}>
             <XAxis type="number" hide />
-            <YAxis type="category" dataKey="name" width={132} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: T.inkSoft, fontFamily: mono }} />
+            <YAxis type="category" dataKey="name" width={132} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: T.ink, fontFamily: mono }} />
             <Tooltip
               cursor={{ fill: "rgba(14,91,67,0.06)" }}
               content={({ active, payload }) =>
@@ -121,7 +121,7 @@ export function TrueExposureCard({ holdings, netWorth }: { holdings: MaybeFund[]
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: T.inkSoft, fontFamily: mono, flexWrap: "wrap" }}>
+      <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: T.ink, fontFamily: mono, flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: T.ledger }} />Held directly
         </span>

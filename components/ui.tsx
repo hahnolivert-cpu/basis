@@ -66,7 +66,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
           <div style={{ fontSize: 15, fontWeight: 600 }}>{title}</div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: T.inkSoft, fontSize: 20, lineHeight: 1, padding: 0 }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, fontSize: 20, lineHeight: 1, padding: 0 }}
           >
             ×
           </button>

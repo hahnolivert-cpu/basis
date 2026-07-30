@@ -88,7 +88,7 @@ export function CompositionCard({
           ) : (
             <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 34 }}>
               <XAxis type="number" hide />
-              <YAxis type="category" dataKey="name" width={110} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: T.inkSoft, fontFamily: mono }} />
+              <YAxis type="category" dataKey="name" width={110} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: T.ink, fontFamily: mono }} />
               <Tooltip content={<ChartTip total={total} />} cursor={{ fill: "rgba(14,91,67,0.06)" }} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={14}>
                 <LabelList
@@ -116,7 +116,7 @@ export function CompositionCard({
             key={`${d.name}-${i}`}
             onClick={() => click(d.name)}
             style={{
-              fontSize: 11, color: T.inkSoft, fontFamily: mono, display: "inline-flex", alignItems: "center", gap: 5,
+              fontSize: 11, color: T.ink, fontFamily: mono, display: "inline-flex", alignItems: "center", gap: 5,
               cursor: onSegmentClick ? "pointer" : undefined,
             }}
           >

@@ -21,7 +21,7 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
         <Eyebrow style={{ marginBottom: 0 }}>Net worth · weekly · {rows.length} weeks</Eyebrow>
         {latest && (
-          <div style={{ fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>
+          <div style={{ fontFamily: mono, fontSize: 12.5, color: T.ink }}>
             {usd(latest.total)} as of {latest.date}
           </div>
         )}
@@ -36,12 +36,12 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
               </linearGradient>
             </defs>
             <CartesianGrid stroke={T.line} vertical={false} />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={6} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
             <YAxis
               tickFormatter={usdK}
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }}
+              tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }}
               width={52}
               domain={[0, domainMax]}
             />
@@ -64,7 +64,7 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
                 label={{
                   value: usdK(g),
                   position: "right",
-                  fill: T.inkSoft,
+                  fill: T.ink,
                   fontSize: 10,
                   fontFamily: mono,
                 }}
@@ -75,7 +75,7 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
         </ResponsiveContainer>
       </div>
       {offScaleGoals.length > 0 && (
-        <div style={{ fontSize: 11, color: T.inkSoft, fontFamily: mono, marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: T.ink, fontFamily: mono, marginTop: 8 }}>
           Dashed line marks {visibleGoals.map(usdK).join(" / ")}. {offScaleGoals.map(usdK).join(" and ")} sit above this
           scale — see goal progress below.
         </div>

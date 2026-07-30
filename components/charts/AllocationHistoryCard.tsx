@@ -24,12 +24,12 @@ export function AllocationHistoryCard({ rows }: { rows: WeeklyRow[] }) {
               100% stacked band chart regardless of how the total moved. */}
           <AreaChart data={rows} stackOffset="expand" margin={{ left: 8, right: 8, top: 6 }}>
             <CartesianGrid stroke={T.line} vertical={false} />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={6} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
             <YAxis
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               tickLine={false}
               axisLine={false}
-              tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }}
+              tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }}
               width={44}
             />
             <Tooltip
@@ -56,13 +56,13 @@ export function AllocationHistoryCard({ rows }: { rows: WeeklyRow[] }) {
       </div>
       <div style={{ marginTop: 8, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "baseline" }}>
         {BANDS.map(([, label, color]) => (
-          <span key={label} style={{ fontSize: 11, color: T.inkSoft, fontFamily: mono, display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <span key={label} style={{ fontSize: 11, color: T.ink, fontFamily: mono, display: "inline-flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
             {label}
           </span>
         ))}
         {first && last && (
-          <span style={{ fontSize: 11, color: T.inkSoft, marginLeft: "auto" }}>
+          <span style={{ fontSize: 11, color: T.ink, marginLeft: "auto" }}>
             Crypto {pctOf(first, "crypto").toFixed(0)}% → {pctOf(last, "crypto").toFixed(0)}% since {first.label} — concentration traded for balance.
           </span>
         )}

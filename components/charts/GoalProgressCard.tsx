@@ -18,9 +18,9 @@ export function GoalProgressCard({ rows }: { rows: WeeklyRow[] }) {
             <div key={goal}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12.5, marginBottom: 5 }}>
                 <span style={{ fontWeight: 600, fontFamily: serif, fontSize: 15 }}>{usdK(goal)}</span>
-                <span style={{ fontFamily: mono, color: achieved ? T.gain : T.inkSoft }}>
+                <span style={{ fontFamily: mono, color: achieved ? T.gain : T.ink }}>
                   {achieved ? (
-                    <>achieved ✓ <span style={{ color: T.inkSoft }}>· {pct.toFixed(0)}%</span></>
+                    <>achieved ✓ <span style={{ color: T.ink }}>· {pct.toFixed(0)}%</span></>
                   ) : (
                     <>
                       {pct.toFixed(1)}% <span style={{ opacity: 0.75 }}>· {usd(goal - total)} to go</span>
@@ -45,7 +45,7 @@ export function GoalProgressCard({ rows }: { rows: WeeklyRow[] }) {
           );
         })}
       </div>
-      <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 12 }}>
+      <div style={{ fontSize: 11.5, color: T.ink, marginTop: 12 }}>
         Measured against the latest weekly close of {usd(total)}. Estimated dates project the trailing
         average dollar change per week across all recorded weeks — not a guarantee.
       </div>

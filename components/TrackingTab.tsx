@@ -60,7 +60,7 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
                   style={{
                     background: "none", border: "none", cursor: "pointer", padding: "10px 0", fontFamily: "inherit",
                     fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: active ? 700 : 500,
-                    color: active ? T.ledger : T.inkSoft, textAlign: c.align, display: "flex",
+                    color: active ? T.ledger : T.ink, textAlign: c.align, display: "flex",
                     justifyContent: c.align === "right" ? "flex-end" : "flex-start", alignItems: "center", gap: 4,
                   }}
                 >
@@ -92,18 +92,18 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
                 />
                 {r.date}
               </div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{usd(r.crypto)}</div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{usd(r.equities)}</div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{usd(r.cash)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.crypto)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.equities)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.cash)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500, fontSize: 12.5 }}>{usd(r.total)}</div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: r.wowAmt === null ? T.inkSoft : r.wowAmt >= 0 ? T.gain : T.loss }}>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: r.wowAmt === null ? T.ink : r.wowAmt >= 0 ? T.gain : T.loss }}>
                 {r.wowAmt === null ? "—" : sign(r.wowAmt, usd(r.wowAmt))}
               </div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: r.wowPct === null ? T.inkSoft : r.wowPct >= 0 ? T.gain : T.loss }}>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: r.wowPct === null ? T.ink : r.wowPct >= 0 ? T.gain : T.loss }}>
                 {r.wowPct === null ? "—" : sign(r.wowPct, r.wowPct.toFixed(1) + "%")}
               </div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>€{fmt(r.eur)}</div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>₿{r.btc.toFixed(2)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>€{fmt(r.eur)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>₿{r.btc.toFixed(2)}</div>
             </div>
           ))}
         </div>
@@ -119,7 +119,7 @@ export function TrackingTab() {
   if (isLoading) {
     return (
       <Card style={{ marginTop: 22 }}>
-        <div style={{ fontSize: 13, color: T.inkSoft, fontFamily: mono }}>Loading weekly history…</div>
+        <div style={{ fontSize: 13, color: T.ink, fontFamily: mono }}>Loading weekly history…</div>
       </Card>
     );
   }
@@ -128,7 +128,7 @@ export function TrackingTab() {
     return (
       <Card style={{ marginTop: 22 }}>
         <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 600, marginBottom: 6 }}>No weekly history yet</div>
-        <div style={{ fontSize: 12.5, color: T.inkSoft, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 12.5, color: T.ink, lineHeight: 1.6 }}>
           {data?.error
             ? `Could not load weekly_snapshots: ${data.error}`
             : "Seed it with: node --env-file=.env.local scripts/import-weekly-snapshots.mjs"}
@@ -145,7 +145,7 @@ export function TrackingTab() {
       <GoalProgressCard rows={rows} />
       <AllocationHistoryCard rows={rows} />
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 30, marginBottom: 2 }}>Weekly detail</div>
-      <div style={{ fontSize: 12, color: T.inkSoft }}>
+      <div style={{ fontSize: 12, color: T.ink }}>
         {rows.length} weeks · {rows.length - autoCount} imported, {autoCount} recorded automatically. EUR and BTC totals
         use each week&apos;s own historical rate.
       </div>

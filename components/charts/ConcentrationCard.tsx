@@ -26,14 +26,14 @@ export function ConcentrationCard({
       </div>
       <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 600 }}>
         {(share * 100).toFixed(0)}%
-        <span style={{ fontSize: 14, color: T.inkSoft, fontFamily: "'Inter', sans-serif", fontWeight: 400 }}> of assets in top 10 positions</span>
+        <span style={{ fontSize: 14, color: T.ink, fontFamily: "'Inter', sans-serif", fontWeight: 400 }}> of assets in top 10 positions</span>
       </div>
       <div style={{ marginTop: 12 }}>
         {top.map((h) => (
           <div key={h.sym} style={{ marginBottom: 9 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
               <span style={{ fontWeight: 600 }}>{h.sym}</span>
-              <span style={{ fontFamily: mono, color: T.inkSoft }}>{usd(h.value)} · {((h.value / total) * 100).toFixed(1)}%</span>
+              <span style={{ fontFamily: mono, color: T.ink }}>{usd(h.value)} · {((h.value / total) * 100).toFixed(1)}%</span>
             </div>
             <div style={{ height: 7, background: "#EDF2EE", borderRadius: 4 }}>
               <div style={{ height: "100%", width: `${(h.value / total) * 100}%`, background: T.ledger, borderRadius: 4 }} />

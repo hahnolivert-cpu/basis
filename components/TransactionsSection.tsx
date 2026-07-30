@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { T, mono, serif } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { Card, Eyebrow, Delta } from "@/components/ui";
 import { formatTicker } from "@/lib/holdings";
 import { mergeBySym } from "@/lib/calc";
 import { useTransactions } from "@/lib/hooks/useTransactions";
+import { usePersistedState } from "@/lib/hooks/usePersistedState";
 import type { TransactionRow } from "@/app/api/transactions/route";
 import type { Holding } from "@/lib/types";
 
@@ -32,13 +33,9 @@ const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
 ];
 const GRID = "0.9fr 0.7fr 0.8fr 0.75fr 0.7fr 0.9fr 0.9fr 1fr 1.05fr 1.25fr";
 
-// Filters default to the last 30 days across all asset classes — the most
-// relevant slice for "what have I been buying recently."
-const daysAgo = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
-};
+// Filters default to year-to-date across all asset classes on first visit;
+// after that, usePersistedState remembers whatever the user last set.
+const startOfYear = () => `${new Date().getFullYear()}-01-01`;
 
 const inputStyle = {
   fontFamily: mono, fontSize: 12.5, padding: "7px 9px", border: `1px solid ${T.line}`, borderRadius: 7,
@@ -54,13 +51,13 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
   const { data, isLoading } = useTransactions();
   const raw = data?.transactions ?? EMPTY_TRANSACTIONS;
 
-  const [dateFrom, setDateFrom] = useState(() => daysAgo(30));
-  const [dateTo, setDateTo] = useState("");
-  const [assetType, setAssetType] = useState<AssetTypeFilter>("all");
-  const [assetQuery, setAssetQuery] = useState("");
-  const [performance, setPerformance] = useState<PerformanceFilter>("all");
-  const [recurring, setRecurring] = useState<RecurringFilter>("all");
-  const [sort, setSort] = useState<Sort>({ key: "date", dir: "desc" });
+  const [dateFrom, setDateFrom] = usePersistedState("tx.dateFrom", startOfYear());
+  const [dateTo, setDateTo] = usePersistedState("tx.dateTo", "");
+  const [assetType, setAssetType] = usePersistedState<AssetTypeFilter>("tx.assetType", "all");
+  const [assetQuery, setAssetQuery] = usePersistedState("tx.assetQuery", "");
+  const [performance, setPerformance] = usePersistedState<PerformanceFilter>("tx.performance", "all");
+  const [recurring, setRecurring] = usePersistedState<RecurringFilter>("tx.recurring", "all");
+  const [sort, setSort] = usePersistedState<Sort>("tx.sort", { key: "date", dir: "desc" });
 
   // Current price per symbol from the live-repriced holdings the rest of the
   // dashboard already has — avoids a second round-trip to the quote APIs
@@ -141,10 +138,10 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
       <Card style={{ marginBottom: 14 }}>
         <Eyebrow style={{ marginBottom: 10 }}>Filters</Eyebrow>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: T.inkSoft }}>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: T.ink }}>
             From <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={inputStyle} />
           </label>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: T.inkSoft }}>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: T.ink }}>
             To <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={inputStyle} />
           </label>
           <select value={assetType} onChange={(e) => setAssetType(e.target.value as AssetTypeFilter)} style={inputStyle}>
@@ -186,7 +183,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                     style={{
                       background: "none", border: "none", cursor: "pointer", padding: "8px 0", fontFamily: "inherit",
                       fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: active ? 700 : 500,
-                      color: active ? T.ledger : T.inkSoft, textAlign: c.align, display: "flex",
+                      color: active ? T.ledger : T.ink, textAlign: c.align, display: "flex",
                       justifyContent: c.align === "right" ? "flex-end" : "flex-start", alignItems: "center", gap: 4,
                     }}
                   >
@@ -198,10 +195,10 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
             </div>
 
             {isLoading && (
-              <div style={{ padding: "16px", fontSize: 12.5, color: T.inkSoft, fontFamily: mono }}>Loading transactions…</div>
+              <div style={{ padding: "16px", fontSize: 12.5, color: T.ink, fontFamily: mono }}>Loading transactions…</div>
             )}
             {!isLoading && sorted.length === 0 && (
-              <div style={{ padding: "16px", fontSize: 12.5, color: T.inkSoft, fontFamily: mono }}>
+              <div style={{ padding: "16px", fontSize: 12.5, color: T.ink, fontFamily: mono }}>
                 {data?.error ? `Could not load transactions: ${data.error}` : "No buy transactions match these filters."}
               </div>
             )}
@@ -212,31 +209,31 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 className={`row${i % 2 === 1 ? " row-alt" : ""}`}
                 style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "8px 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}
               >
-                <div style={{ fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{t.date}</div>
+                <div style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{t.date}</div>
                 <div style={{ fontFamily: mono, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.name}>
                   {formatTicker(t.symbol)}
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, color: t.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
                   {t.portfolio === "capital" ? "976 Capital" : "Personal"}
                 </div>
-                <div style={{ fontFamily: mono, fontSize: 12, color: t.isRecurring ? T.ink : T.inkSoft }}>{t.isRecurring ? "Yes" : "No"}</div>
-                <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{t.qty.toLocaleString("en-US", { maximumFractionDigits: 4 })}</div>
-                <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{usd(t.priceCents / 100, 2)}</div>
-                <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>
+                <div style={{ fontFamily: mono, fontSize: 12, color: t.isRecurring ? T.ink : T.ink }}>{t.isRecurring ? "Yes" : "No"}</div>
+                <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{t.qty.toLocaleString("en-US", { maximumFractionDigits: 4 })}</div>
+                <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(t.priceCents / 100, 2)}</div>
+                <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>
                   {t.currentPrice !== null ? usd(t.currentPrice, 2) : <span>—</span>}
                 </div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(t.totalCents / 100)}</div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12 }}>
-                  {t.currentValueCents !== null ? usd(t.currentValueCents / 100) : <span style={{ color: T.inkSoft }}>closed</span>}
+                  {t.currentValueCents !== null ? usd(t.currentValueCents / 100) : <span style={{ color: T.ink }}>closed</span>}
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  {t.gainPct !== null ? <Delta pct={t.gainPct} amt={t.gainCents! / 100} size={12} weight={600} /> : <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12 }}>—</span>}
+                  {t.gainPct !== null ? <Delta pct={t.gainPct} amt={t.gainCents! / 100} size={12} weight={600} /> : <span style={{ color: T.ink, fontFamily: mono, fontSize: 12 }}>—</span>}
                 </div>
               </div>
             ))}
 
             {sorted.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`, fontSize: 13, fontWeight: 600 }}>
+              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`, fontSize: 13 }}>
                 <div style={{ gridColumn: "1 / 4" }}>Total ({sorted.length})</div>
                 <div />
                 <div />
@@ -245,7 +242,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCostCents / 100)}</div>
                 <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCurrentCents / 100)}</div>
                 <div style={{ textAlign: "right" }}>
-                  <Delta pct={totalGainPct} amt={totalGainCents / 100} size={12.5} weight={700} />
+                  <Delta pct={totalGainPct} amt={totalGainCents / 100} size={12} weight={600} />
                 </div>
               </div>
             )}
