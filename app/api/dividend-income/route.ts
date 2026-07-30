@@ -23,11 +23,24 @@ export type IncomeTransaction = {
   date: string;
   type: IncomeType;
   symbol: string | null;
+  // Always a ticker where one is determinable, so the Source column reads
+  // consistently instead of switching between a ticker and a full sentence
+  // depending on which provider synced the row.
+  source: string;
   name: string;
   institution: string;
   portfolio: "capital" | "personal";
   amountCents: number;
 };
+
+// Plaid's Robinhood dividend feed doesn't always attach a security_id, so
+// `symbol` on those rows is null — but the description still names the
+// ticker (e.g. "Cash dividend of $105.42 from STRC - DIVIDEND"), so it can
+// be recovered from there instead of falling back to the raw sentence.
+function extractTicker(description: string | null): string | null {
+  if (!description) return null;
+  return description.match(/from ([A-Z][A-Z0-9.]{0,9}) -/)?.[1] ?? null;
+}
 
 export async function GET() {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -50,20 +63,24 @@ export async function GET() {
 
     const nameBySymbol = new Map((holdingsRaw ?? []).map((h) => [h.symbol, h.name]));
 
-    // Some Plaid-sourced dividend rows carry no linked security (Robinhood's
-    // feed doesn't always attach one), so `symbol` is null there — fall back
-    // to the raw description, which already names the source in that case
-    // (e.g. "Cash dividend of $105.42 from STRC - DIVIDEND").
-    const transactions: IncomeTransaction[] = (rowsRaw ?? []).map((r) => ({
-      id: r.id,
-      date: r.date,
-      type: r.type as IncomeType,
-      symbol: r.symbol,
-      name: r.symbol ? nameBySymbol.get(r.symbol) ?? r.symbol : r.description ?? "—",
-      institution: r.accounts?.institution ?? "Unknown",
-      portfolio: r.accounts?.portfolio === "personal" ? "personal" : "capital",
-      amountCents: r.amount_cents,
-    }));
+    const transactions: IncomeTransaction[] = (rowsRaw ?? []).map((r) => {
+      const institution = r.accounts?.institution ?? "Unknown";
+      const ticker = r.symbol ?? extractTicker(r.description);
+      // Bank/broker interest isn't tied to a holding at all — there's no
+      // ticker to recover, so the institution is the most useful label.
+      const source = ticker ?? institution;
+      return {
+        id: r.id,
+        date: r.date,
+        type: r.type as IncomeType,
+        symbol: r.symbol,
+        source,
+        name: ticker ? nameBySymbol.get(ticker) ?? ticker : institution,
+        institution,
+        portfolio: r.accounts?.portfolio === "personal" ? "personal" : "capital",
+        amountCents: r.amount_cents,
+      };
+    });
 
     return jsonNoStore({ transactions });
   } catch (e) {

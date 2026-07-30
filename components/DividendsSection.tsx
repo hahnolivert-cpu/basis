@@ -8,9 +8,20 @@ import { useIncome } from "@/lib/hooks/useIncome";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 
-type SortKey = "date" | "asset" | "type" | "portfolio" | "amount";
+type SortKey = "date" | "source" | "type" | "portfolio" | "gross" | "withholding" | "net";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
-type TypeFilter = "all" | "dividend" | "interest" | "withholding_tax";
+type TypeFilter = "all" | "dividend" | "interest";
+
+type Row = {
+  id: string;
+  date: string;
+  type: IncomeTransaction["type"];
+  source: string;
+  name: string;
+  portfolio: "capital" | "personal";
+  grossCents: number;
+  withholdingCents: number;
+};
 
 const TYPE_LABEL: Record<IncomeTransaction["type"], string> = {
   dividend: "Dividend",
@@ -20,12 +31,14 @@ const TYPE_LABEL: Record<IncomeTransaction["type"], string> = {
 
 const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "date", label: "Date", align: "left" },
-  { key: "asset", label: "Source", align: "left" },
+  { key: "source", label: "Source", align: "left" },
   { key: "type", label: "Type", align: "left" },
   { key: "portfolio", label: "Portfolio", align: "left" },
-  { key: "amount", label: "Amount", align: "right" },
+  { key: "gross", label: "Gross", align: "right" },
+  { key: "withholding", label: "Withholding", align: "right" },
+  { key: "net", label: "Net", align: "right" },
 ];
-const GRID = "0.9fr 1.6fr 1.1fr 0.9fr 1fr";
+const GRID = "0.8fr 0.9fr 0.9fr 0.85fr 0.85fr 0.95fr 0.9fr";
 
 const startOfYear = () => `${new Date().getFullYear()}-01-01`;
 
@@ -46,28 +59,63 @@ export function DividendsSection() {
   const [assetQuery, setAssetQuery] = usePersistedState("div.assetQuery", "");
   const [sort, setSort] = usePersistedState<Sort>("div.sort", { key: "date", dir: "desc" });
 
+  // Withholding tax arrives from IBKR as its own cash-transaction line, dated
+  // and symbol-matched to the dividend it was withheld against — fold it
+  // into that dividend's row as a column instead of listing it separately.
+  // Any withholding row that can't find its match (shouldn't happen with
+  // real data, but the sync can't guarantee it) still surfaces as its own
+  // row rather than silently vanishing.
+  const merged = useMemo<Row[]>(() => {
+    const withholdingByKey = new Map<string, IncomeTransaction>();
+    for (const t of raw) {
+      if (t.type === "withholding_tax" && t.symbol) withholdingByKey.set(`${t.date}|${t.symbol}`, t);
+    }
+    const consumed = new Set<string>();
+    const rows: Row[] = [];
+    for (const t of raw) {
+      if (t.type === "withholding_tax") continue;
+      const key = t.symbol ? `${t.date}|${t.symbol}` : null;
+      const wh = key ? withholdingByKey.get(key) : undefined;
+      if (wh && key) consumed.add(key);
+      rows.push({
+        id: t.id, date: t.date, type: t.type, source: t.source, name: t.name, portfolio: t.portfolio,
+        grossCents: t.amountCents, withholdingCents: wh?.amountCents ?? 0,
+      });
+    }
+    for (const [key, t] of Array.from(withholdingByKey.entries())) {
+      if (consumed.has(key)) continue;
+      rows.push({
+        id: t.id, date: t.date, type: t.type, source: t.source, name: t.name, portfolio: t.portfolio,
+        grossCents: 0, withholdingCents: t.amountCents,
+      });
+    }
+    return rows;
+  }, [raw]);
+
   const filtered = useMemo(
     () =>
-      raw.filter((t) => {
-        if (dateFrom && t.date < dateFrom) return false;
-        if (dateTo && t.date > dateTo) return false;
-        if (typeFilter !== "all" && t.type !== typeFilter) return false;
-        if (assetQuery && !`${t.symbol ?? ""} ${t.name}`.toLowerCase().includes(assetQuery.toLowerCase())) return false;
+      merged.filter((r) => {
+        if (dateFrom && r.date < dateFrom) return false;
+        if (dateTo && r.date > dateTo) return false;
+        if (typeFilter !== "all" && r.type !== typeFilter) return false;
+        if (assetQuery && !`${r.source} ${r.name}`.toLowerCase().includes(assetQuery.toLowerCase())) return false;
         return true;
       }),
-    [raw, dateFrom, dateTo, typeFilter, assetQuery]
+    [merged, dateFrom, dateTo, typeFilter, assetQuery]
   );
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
     const { key, dir } = sort;
-    const val = (r: IncomeTransaction): number | string => {
+    const val = (r: Row): number | string => {
       switch (key) {
         case "date": return r.date;
-        case "asset": return r.symbol ?? r.name;
+        case "source": return r.source;
         case "type": return r.type;
         case "portfolio": return r.portfolio;
-        case "amount": return r.amountCents;
+        case "gross": return r.grossCents;
+        case "withholding": return r.withholdingCents;
+        case "net": return r.grossCents + r.withholdingCents;
       }
     };
     arr.sort((a, b) => {
@@ -81,10 +129,16 @@ export function DividendsSection() {
   const clickSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
 
-  const dividendsCents = filtered.filter((t) => t.type === "dividend").reduce((s, t) => s + t.amountCents, 0);
-  const interestCents = filtered.filter((t) => t.type === "interest").reduce((s, t) => s + t.amountCents, 0);
-  const withholdingCents = filtered.filter((t) => t.type === "withholding_tax").reduce((s, t) => s + t.amountCents, 0);
+  // Summary cards read straight off the raw ledger (pre-merge) so they stay
+  // correct regardless of how rows get paired for display.
+  const dividendsCents = raw.filter((t) => t.type === "dividend").reduce((s, t) => s + t.amountCents, 0);
+  const interestCents = raw.filter((t) => t.type === "interest").reduce((s, t) => s + t.amountCents, 0);
+  const withholdingCents = raw.filter((t) => t.type === "withholding_tax").reduce((s, t) => s + t.amountCents, 0);
   const netCents = dividendsCents + interestCents + withholdingCents;
+
+  const totalGross = sorted.reduce((s, r) => s + r.grossCents, 0);
+  const totalWithholding = sorted.reduce((s, r) => s + r.withholdingCents, 0);
+  const totalNet = totalGross + totalWithholding;
 
   return (
     <div style={{ marginTop: 30 }}>
@@ -122,7 +176,6 @@ export function DividendsSection() {
             <option value="all">All types</option>
             <option value="dividend">Dividends</option>
             <option value="interest">Interest</option>
-            <option value="withholding_tax">Withholding tax</option>
           </select>
           <input
             type="text"
@@ -136,7 +189,7 @@ export function DividendsSection() {
 
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
-          <div style={{ minWidth: 640 }}>
+          <div style={{ minWidth: 760 }}>
             <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
               {COLS.map((c) => {
                 const active = sort.key === c.key;
@@ -167,22 +220,28 @@ export function DividendsSection() {
               </div>
             )}
 
-            {sorted.map((t, i) => (
+            {sorted.map((r, i) => (
               <div
-                key={t.id}
+                key={r.id}
                 className={`row${i % 2 === 1 ? " row-alt" : ""}`}
                 style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "8px 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}
               >
-                <div style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{t.date}</div>
-                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.name}>
-                  {t.symbol ?? t.name}
+                <div style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{r.date}</div>
+                <div style={{ fontFamily: mono, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.name}>
+                  {r.source}
                 </div>
-                <div style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{TYPE_LABEL[t.type]}</div>
-                <div style={{ fontFamily: mono, fontSize: 12, color: t.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
-                  {t.portfolio === "capital" ? "976 Capital" : "Personal"}
+                <div style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{TYPE_LABEL[r.type]}</div>
+                <div style={{ fontFamily: mono, fontSize: 12, color: r.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
+                  {r.portfolio === "capital" ? "976 Capital" : "Personal"}
                 </div>
-                <div style={{ textAlign: "right", fontFamily: mono, color: t.amountCents >= 0 ? T.gain : T.loss }}>
-                  {usd(t.amountCents / 100)}
+                <div style={{ textAlign: "right", fontFamily: mono, color: r.grossCents > 0 ? T.gain : T.ink }}>
+                  {r.grossCents !== 0 ? usd(r.grossCents / 100) : "—"}
+                </div>
+                <div style={{ textAlign: "right", fontFamily: mono, color: r.withholdingCents < 0 ? T.loss : T.ink }}>
+                  {r.withholdingCents !== 0 ? usd(r.withholdingCents / 100) : "—"}
+                </div>
+                <div style={{ textAlign: "right", fontFamily: mono, color: r.grossCents + r.withholdingCents >= 0 ? T.gain : T.loss }}>
+                  {usd((r.grossCents + r.withholdingCents) / 100)}
                 </div>
               </div>
             ))}
@@ -191,8 +250,12 @@ export function DividendsSection() {
               <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`, fontSize: 13 }}>
                 <div style={{ gridColumn: "1 / 4" }}>Total ({sorted.length})</div>
                 <div />
-                <div style={{ textAlign: "right", fontFamily: mono, color: netCents >= 0 ? T.gain : T.loss }}>
-                  {usd(sorted.reduce((s, t) => s + t.amountCents, 0) / 100)}
+                <div style={{ textAlign: "right", fontFamily: mono, color: T.gain }}>{usd(totalGross / 100)}</div>
+                <div style={{ textAlign: "right", fontFamily: mono, color: totalWithholding < 0 ? T.loss : T.ink }}>
+                  {totalWithholding !== 0 ? usd(totalWithholding / 100) : "—"}
+                </div>
+                <div style={{ textAlign: "right", fontFamily: mono, color: totalNet >= 0 ? T.gain : T.loss }}>
+                  {usd(totalNet / 100)}
                 </div>
               </div>
             )}

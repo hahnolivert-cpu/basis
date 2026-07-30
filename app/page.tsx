@@ -19,7 +19,7 @@ import { useHoldings } from "@/lib/hooks/useHoldings";
 import { useLiabilities } from "@/lib/hooks/useLiabilities";
 
 const TABS: [string, string][] = [
-  ["networth", "Net Worth"],
+  ["networth", "Dashboard"],
   ["holdings", "Holdings"],
   ["tracking", "Tracking"],
   ["scenarios", "Scenario Planning"],
