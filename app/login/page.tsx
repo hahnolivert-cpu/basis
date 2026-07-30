@@ -73,8 +73,10 @@ export default function LoginPage() {
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 32px mark */}
+          <img src="/logo.png" alt="" width={32} height={32} style={{ display: "block", margin: "0 auto 10px" }} />
           <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
-            Basis <span style={{ color: T.inkSoft, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>· portfolio ledger</span>
+            Ascendia
           </div>
           <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 600, marginTop: 10 }}>
             {mode === "signin" ? "Sign in" : "Create account"}

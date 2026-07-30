@@ -18,7 +18,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Basis · portfolio ledger",
+  title: "Ascendia",
   description: "Single-user personal portfolio and net worth tracker",
 };
 

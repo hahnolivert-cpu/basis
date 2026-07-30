@@ -77,8 +77,12 @@ export default function Home() {
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "34px 24px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
-            Basis <span style={{ color: T.inkSoft, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>· portfolio ledger</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
+            <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
+            <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
+              Ascendia
+            </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>
@@ -157,7 +161,7 @@ export default function Home() {
         )}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
         {tab === "tracking" && <TrackingTab />}
-        {tab === "scenarios" && <ScenarioTab startNW={startNW} />}
+        {tab === "scenarios" && <ScenarioTab startNW={startNW} holdings={holdings} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
           Positions come from IBKR Flex, the Brex API, and Plaid (Chase, Robinhood); prices are live via Finnhub

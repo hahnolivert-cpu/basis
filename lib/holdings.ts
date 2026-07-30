@@ -23,7 +23,7 @@ type Row = {
 // Providers report tickers in their own dialects. Normalises to what the quote
 // APIs expect: IBKR writes crypto as "BTC.USD-PAXOS" and share classes with a
 // space ("BRK B"), while Finnhub wants a dot ("BRK.B").
-const CRYPTO_BASES: Record<string, string> = {
+export const CRYPTO_BASES: Record<string, string> = {
   BTC: "bitcoin",
   ETH: "ethereum",
   SOL: "solana",
@@ -103,11 +103,14 @@ export function underlyingSymbol(symbol: string): string {
 // genuinely non-interest-bearing, not a data gap.
 //
 // Brex Treasury: published base 7-day yield on the DGVXX sweep, effective
-// 2026-07-29 — https://www.brex.com/product/cash-management-account/rates-fees.
+// 2026-07-30 — https://www.brex.com/product/cash-management-account/rates-fees.
 // Excludes Brex's balance-based bonus (0–0.35% on top) since eligibility
 // isn't visible to us; better to understate than assume a tier we can't see.
+// Brex's API reports these payouts as DIVIDEND transactions but never the
+// rate itself, so this is a hand-maintained snapshot, not a live pull —
+// it drifts whenever Brex changes the published rate and needs updating here.
 const CASH_APY_ESTIMATE: Record<string, number> = {
-  Treasury: 3.35,
+  Treasury: 3.4,
 };
 
 // IBKR pays credit interest only on USD cash above the first $10k, at 4.33%

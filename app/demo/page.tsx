@@ -11,7 +11,7 @@ import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
 import { TrackingTab } from "@/components/TrackingTab";
-import { DEMO_HOLDINGS, DEMO_LIABILITIES, DEMO_DEBTS_CENTS, DEMO_WEEKLY_ROWS, DEMO_SNAPSHOTS } from "@/lib/demoData";
+import { DEMO_HOLDINGS, DEMO_LIABILITIES, DEMO_DEBTS_CENTS, DEMO_WEEKLY_ROWS, DEMO_SNAPSHOTS, DEMO_TRANSACTIONS } from "@/lib/demoData";
 
 const TABS: [string, string][] = [
   ["networth", "Net Worth"],
@@ -43,8 +43,12 @@ export default function DemoPage() {
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "34px 24px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
-            Basis <span style={{ color: T.inkSoft, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>· portfolio ledger</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
+            <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
+            <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
+              Ascendia
+            </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span
@@ -118,9 +122,11 @@ export default function DemoPage() {
             demoSnapshots={DEMO_SNAPSHOTS}
           />
         )}
-        {tab === "holdings" && <HoldingsTab holdings={holdings} capitalLabel="Capital" />}
+        {tab === "holdings" && (
+          <HoldingsTab holdings={holdings} capitalLabel="Capital" demoTransactions={DEMO_TRANSACTIONS} />
+        )}
         {tab === "tracking" && <TrackingTab demoRows={DEMO_WEEKLY_ROWS} />}
-        {tab === "scenarios" && <ScenarioTab startNW={startNW} />}
+        {tab === "scenarios" && <ScenarioTab startNW={startNW} holdings={holdings} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
           This is a demo with entirely fictional holdings, balances, and history — no real account or provider is

@@ -131,7 +131,7 @@ export default function LinkPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "34px 24px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10 }}>
           <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
-            Basis <span style={{ color: T.inkSoft, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>· connect accounts</span>
+            Ascendia <span style={{ color: T.inkSoft, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>· connect accounts</span>
           </div>
           <Link href="/" style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>
             ← back to dashboard
