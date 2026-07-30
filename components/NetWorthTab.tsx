@@ -252,7 +252,7 @@ export function NetWorthTab({
           title="Day change attribution · top movers"
           rows={(() => {
             const ranked = mergeBySym(holdings)
-              .map((h) => ({ name: formatTicker(h.sym), v: Math.round((h.value * h.day) / 100) }))
+              .map((h) => ({ name: formatTicker(h.sym), v: Math.round((h.value * h.day) / 100), pct: h.day }))
               .filter((d) => d.v !== 0)
               .sort((a, b) => b.v - a.v);
             return ranked.length <= 12 ? ranked : [...ranked.slice(0, 6), ...ranked.slice(-6)];
