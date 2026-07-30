@@ -10,7 +10,7 @@ import { useTransactions } from "@/lib/hooks/useTransactions";
 import type { TransactionRow } from "@/app/api/transactions/route";
 import type { Holding } from "@/lib/types";
 
-type SortKey = "date" | "asset" | "portfolio" | "recurring" | "qty" | "price" | "total" | "current" | "gainPct";
+type SortKey = "date" | "asset" | "portfolio" | "recurring" | "qty" | "buyPrice" | "currentPrice" | "totalBuy" | "totalCurrent" | "gainPct";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 type AssetTypeFilter = "all" | "Stocks" | "ETFs" | "Crypto";
 type PerformanceFilter = "all" | "winners" | "losers";
@@ -24,12 +24,13 @@ const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "portfolio", label: "Portfolio", align: "left" },
   { key: "recurring", label: "Recurring", align: "left" },
   { key: "qty", label: "Qty", align: "right" },
-  { key: "price", label: "Price", align: "right" },
-  { key: "total", label: "Total", align: "right" },
-  { key: "current", label: "Current value", align: "right" },
+  { key: "buyPrice", label: "Buy price", align: "right" },
+  { key: "currentPrice", label: "Current price", align: "right" },
+  { key: "totalBuy", label: "Total buy", align: "right" },
+  { key: "totalCurrent", label: "Total current", align: "right" },
   { key: "gainPct", label: "Gain since buy", align: "right" },
 ];
-const GRID = "1fr 1.4fr 0.85fr 0.8fr 0.7fr 0.9fr 1fr 1.1fr 1.3fr";
+const GRID = "1fr 1.3fr 0.8fr 0.75fr 0.65fr 0.85fr 0.85fr 0.95fr 1fr 1.2fr";
 
 // Filters default to the last 30 days across all asset classes — the most
 // relevant slice for "what have I been buying recently."
@@ -110,9 +111,10 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
         case "portfolio": return r.portfolio;
         case "recurring": return r.isRecurring ? 1 : 0;
         case "qty": return r.qty;
-        case "price": return r.priceCents;
-        case "total": return r.totalCents;
-        case "current": return r.currentValueCents ?? -Infinity;
+        case "buyPrice": return r.priceCents;
+        case "currentPrice": return r.currentPrice ?? -Infinity;
+        case "totalBuy": return r.totalCents;
+        case "totalCurrent": return r.currentValueCents ?? -Infinity;
         case "gainPct": return r.gainPct ?? -Infinity;
       }
     };
@@ -173,7 +175,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
 
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
-          <div style={{ minWidth: 860 }}>
+          <div style={{ minWidth: 960 }}>
             <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
               {COLS.map((c) => {
                 const active = sort.key === c.key;
@@ -221,6 +223,9 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 <div style={{ fontFamily: mono, fontSize: 12, color: t.isRecurring ? T.ink : T.inkSoft }}>{t.isRecurring ? "Yes" : "No"}</div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{t.qty.toLocaleString("en-US", { maximumFractionDigits: 4 })}</div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{usd(t.priceCents / 100, 2)}</div>
+                <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>
+                  {t.currentPrice !== null ? usd(t.currentPrice, 2) : <span>—</span>}
+                </div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(t.totalCents / 100)}</div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12 }}>
                   {t.currentValueCents !== null ? usd(t.currentValueCents / 100) : <span style={{ color: T.inkSoft }}>closed</span>}
@@ -234,6 +239,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
             {sorted.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`, fontSize: 13, fontWeight: 600 }}>
                 <div style={{ gridColumn: "1 / 4" }}>Total ({sorted.length})</div>
+                <div />
                 <div />
                 <div />
                 <div />
