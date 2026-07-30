@@ -1,6 +1,12 @@
 import { safeMessage } from "@/lib/http";
 import { createServiceClient } from "@/lib/supabase/service";
-import { assetClassForSecurity, getAccounts, getInvestmentHoldings, type PlaidAccount } from "@/lib/plaid";
+import {
+  assetClassForSecurity,
+  getAccounts,
+  getInvestmentHoldings,
+  getInvestmentTransactions,
+  type PlaidAccount,
+} from "@/lib/plaid";
 
 // Plaid sync for Chase (depository) and Robinhood (investments).
 //
@@ -26,9 +32,38 @@ type HoldingWrite = {
   updated_at: string;
 };
 
+type TxnWrite = {
+  external_id: string;
+  date: string;
+  type: string;
+  symbol: string | null;
+  amount_cents: number;
+  description: string;
+  qty: number | null;
+  price_cents: number | null;
+};
+
 const cents = (n: number) => Math.round(n * 100);
 const money = (c: number) =>
   `$${(c / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Investment-transaction history only goes back this far — plenty for
+// estimating a recurring monthly contribution rate without pulling a
+// decade of noise.
+const TXN_LOOKBACK_DAYS = 730;
+
+// Maps Plaid's type/subtype pair onto our transactions.type enum. Returns
+// null for categories deliberately not recorded (e.g. a cancelled order).
+function mapPlaidInvTxnType(type: string, subtype: string): TxnWrite["type"] | null {
+  const t = `${type} ${subtype}`.toLowerCase();
+  if (t.includes("buy")) return "buy";
+  if (t.includes("sell")) return "sell";
+  if (t.includes("dividend")) return "dividend";
+  if (t.includes("interest")) return "interest";
+  if (t.includes("deposit") || t.includes("contribution") || t.includes("withdrawal") || t.includes("distribution") || t.includes("transfer")) return "transfer";
+  if (t.includes("fee") || t.includes("tax")) return "transfer";
+  return null; // e.g. "cancel"
+}
 
 type ItemRow = { institution: string; access_token: string };
 
@@ -38,6 +73,8 @@ export type PlaidInstitutionPlan = {
   upserts: HoldingWrite[];
   liabilities: { name: string; amount_cents: number }[];
   deletes: { symbol: string; reason: string }[];
+  newTransactions: TxnWrite[];
+  alreadyRecordedTransactions: number;
   noCostBasis: string[];
   warnings: string[];
 };
@@ -102,8 +139,13 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
     amount_cents: cents(Math.abs(a.balances.current ?? 0)),
   }));
 
-  // Investment holdings, where the item supports the product.
+  // Investment holdings and transaction history, where the item supports
+  // the product. An item linked with only the transactions product fails
+  // both calls, which is expected and recorded rather than treated as an
+  // error.
   let marginCents = 0;
+  let newTransactions: TxnWrite[] = [];
+  let alreadyRecordedTransactions = 0;
   try {
     const { holdings, securities } = await getInvestmentHoldings(item.access_token);
     const secById = new Map(securities.map((s) => [s.security_id, s]));
@@ -156,6 +198,53 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
       });
     }
     if (marginCents > 0) liabilities.push({ name: `${item.institution} margin balance`, amount_cents: marginCents });
+
+    // Purchase history, used to infer a recurring-contribution rate for
+    // scenario planning. Kept in its own try/catch so a transactions-specific
+    // failure doesn't discard the holdings already parsed above.
+    try {
+      const end = new Date().toISOString().slice(0, 10);
+      const start = new Date(Date.now() - TXN_LOOKBACK_DAYS * 86400000).toISOString().slice(0, 10);
+      const { investment_transactions, securities: txnSecurities } = await getInvestmentTransactions(item.access_token, start, end);
+      const txnSecById = new Map(txnSecurities.map((s) => [s.security_id, s]));
+
+      const ids = investment_transactions.map((t) => `plaid:${item.institution}:${t.investment_transaction_id}`);
+      let known = new Set<string>();
+      if (ids.length) {
+        const { data: found } = await supabase
+          .from("transactions")
+          .select("external_id")
+          .in("external_id", ids)
+          .returns<{ external_id: string }[]>();
+        known = new Set((found ?? []).map((r) => r.external_id));
+      }
+      alreadyRecordedTransactions = known.size;
+
+      newTransactions = investment_transactions
+        .map((t) => {
+          const type = mapPlaidInvTxnType(t.type, t.subtype);
+          const externalId = `plaid:${item.institution}:${t.investment_transaction_id}`;
+          if (!type || known.has(externalId)) return null;
+          const sec = t.security_id ? txnSecById.get(t.security_id) : undefined;
+          return {
+            external_id: externalId,
+            date: t.date,
+            type,
+            symbol: (sec?.ticker_symbol || sec?.name || null)?.trim() || null,
+            // Plaid signs a buy positive (cash debited) and a sell negative
+            // (cash credited) — the opposite of the netCash convention
+            // already stored for IBKR (buy negative, sell positive).
+            // Flipping here keeps one consistent sign across providers.
+            amount_cents: cents(-t.amount),
+            description: t.name,
+            qty: type === "buy" || type === "sell" ? Math.abs(t.quantity) : null,
+            price_cents: type === "buy" || type === "sell" ? cents(t.price) : null,
+          };
+        })
+        .filter((t): t is TxnWrite => t !== null);
+    } catch (e) {
+      warnings.push(`no investment transactions for ${item.institution} — ${safeMessage(e)}`);
+    }
   } catch (e) {
     warnings.push(
       `no investment holdings for ${item.institution} — ${safeMessage(e)}`
@@ -178,7 +267,17 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
     );
   }
 
-  return { institution: item.institution, accountId: account.id, upserts, liabilities, deletes, noCostBasis, warnings };
+  return {
+    institution: item.institution,
+    accountId: account.id,
+    upserts,
+    liabilities,
+    deletes,
+    newTransactions,
+    alreadyRecordedTransactions,
+    noCostBasis,
+    warnings,
+  };
 }
 
 export async function runPlaidSync({ dryRun = false }: { dryRun?: boolean } = {}) {
@@ -217,12 +316,21 @@ export async function runPlaidSync({ dryRun = false }: { dryRun?: boolean } = {}
         total: money(p.upserts.reduce((s, u) => s + u.value_cents, 0)),
         liabilities: p.liabilities.map((l) => ({ name: l.name, amount: money(l.amount_cents) })),
         wouldDelete: p.deletes,
+        wouldInsertTransactions: p.newTransactions.length,
+        transactionSample: p.newTransactions.slice(0, 25).map((t) => ({
+          date: t.date,
+          type: t.type,
+          symbol: t.symbol,
+          amount: money(t.amount_cents),
+          description: t.description,
+        })),
+        alreadyRecordedTransactions: p.alreadyRecordedTransactions,
         warnings: p.warnings,
       })),
     };
   }
 
-  const applied = { positions: 0, deleted: 0, liabilities: 0 };
+  const applied = { positions: 0, deleted: 0, liabilities: 0, transactions: 0 };
   const warnings: string[] = [];
 
   for (const plan of plans) {
@@ -262,6 +370,17 @@ export async function runPlaidSync({ dryRun = false }: { dryRun?: boolean } = {}
         );
       if (delErr) throw new Error(`${plan.institution} stale delete failed: ${delErr.message}`);
       applied.deleted += plan.deletes.length;
+    }
+
+    if (plan.newTransactions.length) {
+      const { error: txnErr } = await supabase
+        .from("transactions")
+        .upsert(
+          plan.newTransactions.map((t) => ({ ...t, account_id: plan.accountId })),
+          { onConflict: "external_id" }
+        );
+      if (txnErr) throw new Error(`${plan.institution} transaction insert failed: ${txnErr.message}`);
+      applied.transactions += plan.newTransactions.length;
     }
   }
 

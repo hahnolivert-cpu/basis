@@ -94,6 +94,44 @@ export async function getInvestmentHoldings(accessToken: string) {
   );
 }
 
+export type PlaidInvestmentTransaction = {
+  investment_transaction_id: string;
+  security_id: string | null;
+  date: string; // YYYY-MM-DD
+  name: string;
+  quantity: number;
+  amount: number; // Plaid convention: positive = cash debited (e.g. a buy), negative = cash credited
+  price: number;
+  type: string; // "buy" | "sell" | "cash" | "fee" | "transfer" | "cancel"
+  subtype: string;
+};
+
+// Paginated per Plaid's offset/count convention (unlike /transactions/sync,
+// investment transactions have no cursor endpoint).
+export async function getInvestmentTransactions(accessToken: string, startDate: string, endDate: string) {
+  const count = 500;
+  let offset = 0;
+  let all: PlaidInvestmentTransaction[] = [];
+  let securities: PlaidSecurity[] = [];
+  for (;;) {
+    const res = await plaidPost<{
+      investment_transactions: PlaidInvestmentTransaction[];
+      securities: PlaidSecurity[];
+      total_investment_transactions: number;
+    }>("/investments/transactions/get", {
+      access_token: accessToken,
+      start_date: startDate,
+      end_date: endDate,
+      options: { count, offset },
+    });
+    all = all.concat(res.investment_transactions);
+    if (res.securities.length) securities = res.securities;
+    offset += res.investment_transactions.length;
+    if (res.investment_transactions.length === 0 || all.length >= res.total_investment_transactions) break;
+  }
+  return { investment_transactions: all, securities };
+}
+
 // Maps a Plaid security type onto our asset_class enum. Plaid uses
 // "cash"/"equity"/"etf"/"mutual fund"/"cryptocurrency"/"derivative"/"fixed income".
 export function assetClassForSecurity(type: string | null, ticker: string | null): "Cash" | "Equities" | "Crypto" {

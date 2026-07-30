@@ -36,6 +36,8 @@ type TxnWrite = {
   symbol: string | null;
   amount_cents: number;
   description: string;
+  qty: number | null;
+  price_cents: number | null;
 };
 
 const cents = (n: number) => Math.round(n * 100);
@@ -160,6 +162,8 @@ async function buildPlan(supabase: Supabase, statement: FlexStatement): Promise<
       symbol: t.symbol,
       amount_cents: cents(t.amount),
       description: t.description,
+      qty: t.qty ?? null,
+      price_cents: t.price !== undefined ? cents(t.price) : null,
     }));
 
   return {

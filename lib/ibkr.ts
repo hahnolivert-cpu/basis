@@ -31,6 +31,9 @@ export type FlexTxn = {
   symbol: string | null;
   amount: number; // signed dollars
   description: string;
+  // Only trades carry a quantity/per-unit price; cash transactions don't.
+  qty?: number;
+  price?: number;
 };
 
 export type FlexStatement = {
@@ -187,6 +190,8 @@ export function parseFlexStatement(xml: string): FlexStatement {
       // netCash is proceeds net of commission, already signed by direction.
       amount: t.netCash !== undefined ? num(t.netCash) : num(t.proceeds),
       description: `${side} ${num(t.quantity)} ${t.symbol ?? ""} @ ${num(t.tradePrice)}`.trim(),
+      qty: Math.abs(num(t.quantity)),
+      price: num(t.tradePrice),
     });
   }
 
