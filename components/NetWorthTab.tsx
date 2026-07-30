@@ -15,6 +15,9 @@ import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard
 import { TrueExposureCard } from "@/components/charts/TrueExposureCard";
 import { NetWorthFlowCard } from "@/components/charts/NetWorthFlowCard";
 import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
+import { IncomeHistoryCard } from "@/components/charts/IncomeHistoryCard";
+import { DividendCalendarCard } from "@/components/charts/DividendCalendarCard";
+import { MonthlyActivityCard } from "@/components/charts/MonthlyActivityCard";
 import type { Holding } from "@/lib/types";
 import type { Liability } from "@/app/api/liabilities/route";
 
@@ -91,6 +94,15 @@ export function NetWorthTab({
 
   return (
     <div>
+      {/* Income & activity */}
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 22 }}>
+        <IncomeHistoryCard />
+        <DividendCalendarCard />
+      </div>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
+        <MonthlyActivityCard />
+      </div>
+
       {/* Entity split */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 22 }}>
         <Card style={{ flex: 1.4, minWidth: 300 }}>
@@ -109,12 +121,12 @@ export function NetWorthTab({
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: c }} />{n}
               </span>
-              <span style={{ fontFamily: mono }}>{usd(v)} <span style={{ color: T.inkSoft }}>· {((v / total) * 100).toFixed(1)}%</span></span>
+              <span style={{ fontFamily: mono }}>{usd(v)} <span style={{ color: T.ink }}>· {((v / total) * 100).toFixed(1)}%</span></span>
             </div>
           ))}
           {liabilities.length > 0 &&
             liabilities.map((l) => (
-              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12, color: T.inkSoft }}>
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12, color: T.ink }}>
                 <span>{l.name}</span>
                 <span style={{ fontFamily: mono, color: T.loss }}>−{usd(l.amount_cents / 100).slice(1)}</span>
               </div>
@@ -130,11 +142,11 @@ export function NetWorthTab({
         {/* Estimated income */}
         <Card style={{ flex: 1, minWidth: 280 }}>
           <Eyebrow>Est. dividends &amp; interest</Eyebrow>
-          <div style={{ fontFamily: serif, fontSize: 34, fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.inkSoft, fontFamily: "inherit" }}> / yr</span></div>
-          <div style={{ fontSize: 12.5, color: T.inkSoft, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {usd(income / 12)} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
+          <div style={{ fontFamily: serif, fontSize: 34, fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.ink, fontFamily: "inherit" }}> / yr</span></div>
+          <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {usd(income / 12)} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
           {incomeRows.slice(0, 10).map((h) => (
             <div key={h.sym + h.acct} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 0", borderBottom: `1px solid ${T.line}` }}>
-              <span>{h.sym} <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 11 }}>{h.yld.toFixed(2)}%</span></span>
+              <span>{h.sym} <span style={{ color: T.ink, fontFamily: mono, fontSize: 11 }}>{h.yld.toFixed(2)}%</span></span>
               <span style={{ fontFamily: mono }}>{usd(h.inc)}</span>
             </div>
           ))}
@@ -147,7 +159,7 @@ export function NetWorthTab({
       <Card style={{ marginTop: 16 }}>
         <Eyebrow>Net worth evolution · {weeklyRows.length} weeks</Eyebrow>
         {weeklyRows.length === 0 ? (
-          <div style={{ fontSize: 12.5, color: T.inkSoft, fontFamily: mono }}>
+          <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>
             Awaiting weekly history — see the Tracking tab.
           </div>
         ) : (
@@ -161,8 +173,8 @@ export function NetWorthTab({
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke={T.line} vertical={false} />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={6} />
-                <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} width={52} domain={["dataMin - 60000", "dataMax + 40000"]} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
+                <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} width={52} domain={["dataMin - 60000", "dataMax + 40000"]} />
                 <Tooltip
                   content={({ active, payload }) =>
                     active && payload?.length ? (
@@ -257,7 +269,7 @@ export function NetWorthTab({
       {drilldown && (
         <Modal title={drilldown.title} onClose={() => setDrilldown(null)}>
           {drilldownRows.length === 0 ? (
-            <div style={{ fontSize: 13, color: T.inkSoft }}>No positions found.</div>
+            <div style={{ fontSize: 13, color: T.ink }}>No positions found.</div>
           ) : (
             drilldownRows.map((p, i) => (
               <div
@@ -266,7 +278,7 @@ export function NetWorthTab({
               >
                 <span>
                   <span style={{ fontWeight: 600 }}>{p.sym}</span>
-                  <span style={{ color: T.inkSoft, fontSize: 11.5, marginLeft: 8 }}>
+                  <span style={{ color: T.ink, fontSize: 11.5, marginLeft: 8 }}>
                     {p.name}
                     {p.via ? ` · via ${p.via}` : ""}
                   </span>
