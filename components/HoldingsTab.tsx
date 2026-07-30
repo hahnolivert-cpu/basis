@@ -5,44 +5,58 @@ import { T, mono } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { Delta } from "@/components/ui";
 import { ManualPositions } from "@/components/ManualPositions";
+import { TransactionsSection } from "@/components/TransactionsSection";
 import { formatTicker } from "@/lib/holdings";
 import type { Holding, Portfolio } from "@/lib/types";
+import type { TransactionRow } from "@/app/api/transactions/route";
 
-type SortKey = "name" | "sym" | "cost" | "value" | "yld" | "day" | "gain";
+type SortKey = "name" | "sym" | "cost" | "value" | "pct" | "yld" | "day" | "gain";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 // sourceCount, not the source list itself — the row shows a merge count, not
 // which institutions hold it, per the "don't show where it's stored" ask.
-type Row = Holding & { gain: number; gainPct: number; sourceCount: number };
+type Row = Holding & { gain: number; gainPct: number; pct: number; sourceCount: number };
 
 const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "name", label: "Asset", align: "left" },
   { key: "sym", label: "Ticker", align: "left" },
   { key: "cost", label: "Cost", align: "right" },
   { key: "value", label: "Value", align: "right" },
+  { key: "pct", label: "%", align: "right" },
   { key: "yld", label: "Yield", align: "right" },
   { key: "day", label: "Day", align: "right" },
   { key: "gain", label: "Total gain", align: "right" },
 ];
-const GRID = "2.1fr 0.75fr 0.9fr 1fr 0.7fr 1.1fr 1.3fr";
+const GRID = "2.05fr 0.75fr 0.9fr 1fr 0.55fr 0.7fr 1.1fr 1.3fr";
 // Every row is this height regardless of content — a merged multi-source
 // symbol no longer grows a second line, so rows stay uniform.
 const ROW_HEIGHT = 40;
 
-export function HoldingsTab({ holdings, capitalLabel = "976 Capital" }: { holdings: Holding[]; capitalLabel?: string }) {
+export function HoldingsTab({
+  holdings,
+  capitalLabel = "976 Capital",
+  demoTransactions,
+}: {
+  holdings: Holding[];
+  capitalLabel?: string;
+  // The demo page has no session, so it injects static transaction data
+  // instead of letting TransactionsSection hit the auth-gated API.
+  demoTransactions?: TransactionRow[];
+}) {
   const TABS: [string, string][] = [
     ["all", "All"],
     ["capital", capitalLabel],
     ["personal", "Personal"],
+    ["transactions", "Transactions"],
   ];
-  const [pf, setPf] = useState<"all" | Portfolio>("all");
+  const [pf, setPf] = useState<"all" | Portfolio | "transactions">("all");
   const [sort, setSort] = useState<Sort>({ key: "value", dir: "desc" });
-  const rows = holdings.filter((h) => pf === "all" || h.pf === pf);
 
   // Cash consolidates into a single row regardless of symbol (Brex Treasury,
   // IBKR Cash, Chase checking, ...) — the ledger doesn't need per-account cash
   // lines, just the total. Everything else still merges by symbol, so the same
   // stock held at two brokers is one row.
   const merged = useMemo<Row[]>(() => {
+    const rows = pf === "transactions" ? [] : holdings.filter((h) => pf === "all" || h.pf === pf);
     const bySymbol: Record<string, Holding & { sourceCount: number }> = {};
     let cash: (Holding & { sourceCount: number }) | null = null;
 
@@ -71,12 +85,14 @@ export function HoldingsTab({ holdings, capitalLabel = "976 Capital" }: { holdin
     }
 
     const out = [...Object.values(bySymbol), ...(cash ? [cash] : [])];
+    const totalValue = out.reduce((s, h) => s + h.value, 0);
     return out.map((h) => ({
       ...h,
       gain: h.cls === "Cash" ? 0 : h.value - h.cost,
       gainPct: h.cls === "Cash" ? 0 : ((h.value - h.cost) / h.cost) * 100,
+      pct: totalValue ? (h.value / totalValue) * 100 : 0,
     }));
-  }, [rows]);
+  }, [holdings, pf]);
 
   const sorted = useMemo(() => {
     const arr = [...merged];
@@ -93,13 +109,23 @@ export function HoldingsTab({ holdings, capitalLabel = "976 Capital" }: { holdin
   const clickSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
 
+  // Cash carries cost === value (no gain) and no yield of its own here, so it
+  // dilutes rather than distorts these blended figures.
+  const totalCost = sorted.reduce((s, h) => s + h.cost, 0);
+  const totalDayAmt = sorted.reduce((s, h) => s + (h.value * h.day) / 100, 0);
+  const totalDayPct = total ? (totalDayAmt / (total - totalDayAmt)) * 100 : 0;
+  const investedCost = sorted.filter((h) => h.cls !== "Cash").reduce((s, h) => s + h.cost, 0);
+  const totalGain = sorted.reduce((s, h) => s + h.gain, 0);
+  const totalGainPct = investedCost ? (totalGain / investedCost) * 100 : 0;
+  const blendedYld = total ? sorted.reduce((s, h) => s + h.yld * h.value, 0) / total : 0;
+
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginTop: 18, borderBottom: `1px solid ${T.line}` }}>
         {TABS.map(([id, label]) => (
           <button
             key={id}
-            onClick={() => setPf(id as "all" | Portfolio)}
+            onClick={() => setPf(id as "all" | Portfolio | "transactions")}
             style={{
               background: "none", border: "none", cursor: "pointer", padding: "8px 14px 12px", fontFamily: "inherit",
               fontSize: 14, fontWeight: pf === id ? 600 : 400, color: pf === id ? T.ink : T.inkSoft,
@@ -109,9 +135,15 @@ export function HoldingsTab({ holdings, capitalLabel = "976 Capital" }: { holdin
             {label}
           </button>
         ))}
-        <div style={{ marginLeft: "auto", alignSelf: "center", fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>{usd(total)}</div>
+        {pf !== "transactions" && (
+          <div style={{ marginLeft: "auto", alignSelf: "center", fontFamily: mono, fontSize: 12.5, color: T.inkSoft }}>{usd(total)}</div>
+        )}
       </div>
 
+      {pf === "transactions" ? (
+        <TransactionsSection holdings={holdings} capitalLabel={capitalLabel} demoTransactions={demoTransactions} />
+      ) : (
+        <>
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, marginTop: 18, overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
           {COLS.map((c) => {
@@ -167,15 +199,38 @@ export function HoldingsTab({ holdings, capitalLabel = "976 Capital" }: { holdin
               </div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{isCash ? "—" : usd(h.cost)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{h.pct.toFixed(1)}%</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: h.yld > 0 ? T.ink : T.inkSoft }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
               <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12 }}>—</span> : <Delta pct={h.day} amt={dAmt} size={12} weight={700} />}</div>
               <div style={{ textAlign: "right" }}>{isCash ? <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 12 }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={12} weight={700} />}</div>
             </div>
           );
         })}
+        {sorted.length > 0 && (
+          <div
+            style={{
+              display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
+              padding: "0 16px", fontSize: 13, fontWeight: 600, background: "#F4F7F5",
+            }}
+          >
+            <div style={{ gridColumn: "1 / 3" }}>Total ({sorted.length})</div>
+            <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12 }}>{usd(totalCost)}</div>
+            <div style={{ textAlign: "right", fontFamily: mono }}>{usd(total)}</div>
+            <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12 }}>100.0%</div>
+            <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{blendedYld > 0 ? blendedYld.toFixed(2) + "%" : "—"}</div>
+            <div style={{ textAlign: "right" }}>
+              <Delta pct={totalDayPct} amt={totalDayAmt} size={12.5} weight={700} />
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <Delta pct={totalGainPct} amt={totalGain} size={12.5} weight={700} />
+            </div>
+          </div>
+        )}
       </div>
 
-      <ManualPositions holdings={holdings} />
+          <ManualPositions holdings={holdings} />
+        </>
+      )}
     </div>
   );
 }

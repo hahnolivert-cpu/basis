@@ -1,6 +1,7 @@
 import type { Holding } from "./types";
 import type { WeeklySnapshot } from "./types";
 import type { Liability } from "@/app/api/liabilities/route";
+import type { TransactionRow } from "@/app/api/transactions/route";
 import { toRows } from "./weekly";
 
 // Entirely fictional portfolio for the public /demo route — no real account,
@@ -70,3 +71,83 @@ export const DEMO_SNAPSHOTS: WeeklySnapshot[] = Array.from({ length: WEEK_COUNT 
 });
 
 export const DEMO_WEEKLY_ROWS = toRows(DEMO_SNAPSHOTS);
+
+// Stand-in for /api/transactions — a fictional buy history covering a
+// recurring monthly VOO purchase, a recurring-but-losing ETH DCA, and a
+// couple of one-off lump-sum buys, so the Transactions section's filters
+// (asset type, performance, recurring, portfolio) all have something to
+// demonstrate. Dates are spread so the default "last 30 days" filter still
+// shows a handful of rows while the older ones (e.g. BTC) only appear once
+// the date range is widened — the same behavior a real account would show.
+export const DEMO_TRANSACTIONS: TransactionRow[] = [
+  ...["2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01", "2026-07-01"].map((date, i) => ({
+    id: `demo-voo-${i}`,
+    date,
+    symbol: "VOO",
+    name: "Vanguard S&P 500 ETF",
+    assetClass: "Equities",
+    isEtf: true,
+    institution: "Demo Brokerage",
+    portfolio: "capital" as const,
+    qty: 35,
+    priceCents: 52000 + i * 900,
+    totalCents: (52000 + i * 900) * 35,
+    isRecurring: true,
+  })),
+  ...["2026-01-15", "2026-03-15", "2026-05-15", "2026-07-15"].map((date, i) => ({
+    id: `demo-eth-${i}`,
+    date,
+    symbol: "ETH",
+    name: "Ethereum",
+    assetClass: "Crypto",
+    isEtf: false,
+    institution: "Demo Exchange",
+    portfolio: "personal" as const,
+    qty: 3.1,
+    priceCents: (2480 - i * 15) * 100,
+    totalCents: (2480 - i * 15) * 100 * 3.1,
+    isRecurring: true,
+  })),
+  {
+    id: "demo-btc-1",
+    date: "2025-12-10",
+    symbol: "BTC",
+    name: "Bitcoin",
+    assetClass: "Crypto",
+    isEtf: false,
+    institution: "Demo Exchange",
+    portfolio: "capital" as const,
+    qty: 1.35,
+    priceCents: 4520000,
+    totalCents: Math.round(4520000 * 1.35),
+    isRecurring: false,
+  },
+  {
+    id: "demo-aapl-1",
+    date: "2026-07-10",
+    symbol: "AAPL",
+    name: "Apple Inc",
+    assetClass: "Equities",
+    isEtf: false,
+    institution: "Demo Brokerage",
+    portfolio: "capital" as const,
+    qty: 320,
+    priceCents: 16000,
+    totalCents: 16000 * 320,
+    isRecurring: false,
+  },
+  {
+    id: "demo-sol-1",
+    date: "2026-07-20",
+    symbol: "SOL",
+    name: "Solana",
+    assetClass: "Crypto",
+    isEtf: false,
+    institution: "Demo Exchange",
+    portfolio: "personal" as const,
+    qty: 145,
+    priceCents: 6690,
+    totalCents: 6690 * 145,
+    isRecurring: false,
+  },
+];
