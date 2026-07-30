@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { fetchBrexAccounts, fetchBrexTransactions, type BrexAccount, type BrexTxn } from "@/lib/brex";
+import { fetchBrexAccounts, fetchBrexCardBalanceCents, fetchBrexTransactions, type BrexAccount, type BrexTxn } from "@/lib/brex";
 
 // Brex sync, callable in-process like the IBKR one. Each Brex cash account
 // becomes one Cash holding under the single Brex account row.
@@ -37,6 +37,7 @@ export type BrexPlan = {
   account: { id: string; name: string };
   accounts: BrexAccount[];
   upserts: HoldingWrite[];
+  liabilities: { name: string; amount_cents: number }[];
   deletes: { symbol: string; reason: string }[];
   newTransactions: TxnWrite[];
   alreadyRecordedTransactions: number;
@@ -45,7 +46,12 @@ export type BrexPlan = {
 
 type Supabase = ReturnType<typeof createServiceClient>;
 
-async function buildPlan(supabase: Supabase, accounts: BrexAccount[], txns: BrexTxn[]): Promise<BrexPlan> {
+async function buildPlan(
+  supabase: Supabase,
+  accounts: BrexAccount[],
+  txns: BrexTxn[],
+  cardBalanceCents: number
+): Promise<BrexPlan> {
   const warnings: string[] = [];
 
   const { data: account, error } = await supabase
@@ -118,10 +124,13 @@ async function buildPlan(supabase: Supabase, accounts: BrexAccount[], txns: Brex
       description: t.description,
     }));
 
+  const liabilities = cardBalanceCents > 0 ? [{ name: "Brex charge card", amount_cents: cardBalanceCents }] : [];
+
   return {
     account: { id: account.id, name: account.name },
     accounts,
     upserts,
+    liabilities,
     deletes,
     newTransactions,
     alreadyRecordedTransactions: known.size,
@@ -136,6 +145,7 @@ export function summariseBrexPlan(plan: BrexPlan) {
     account: plan.account,
     balances: plan.upserts.map((u) => ({ symbol: u.symbol, name: u.name, value: money(u.value_cents) })),
     total: money(plan.upserts.reduce((s, u) => s + u.value_cents, 0)),
+    liabilities: plan.liabilities.map((l) => ({ name: l.name, amount: money(l.amount_cents) })),
     wouldDelete: plan.deletes,
     wouldInsertTransactions: plan.newTransactions.length,
     transactionsByType: plan.newTransactions.reduce<Record<string, number>>((acc, t) => {
@@ -164,9 +174,10 @@ export async function runBrexSync({ dryRun = false }: { dryRun?: boolean } = {})
   );
   const txns = fetched.flatMap((f) => f.transactions);
   const skippedInternal = fetched.reduce((s, f) => s + f.skippedInternal, 0);
+  const cardBalanceCents = await fetchBrexCardBalanceCents(token).catch(() => 0);
 
   const supabase = createServiceClient();
-  const plan = await buildPlan(supabase, accounts, txns);
+  const plan = await buildPlan(supabase, accounts, txns, cardBalanceCents);
   if (skippedInternal) {
     plan.warnings.push(
       `${skippedInternal} internal checking<->Treasury transfer(s) skipped — both legs are the same money, so recording them would double-count`
@@ -179,11 +190,22 @@ export async function runBrexSync({ dryRun = false }: { dryRun?: boolean } = {})
     throw new Error("Brex returned no active accounts — refusing to write, as that would delete every Brex holding");
   }
 
-  const applied = { balances: 0, deleted: 0, transactions: 0 };
+  const applied = { balances: 0, deleted: 0, transactions: 0, liabilities: 0 };
 
   const { error: upsertErr } = await supabase.from("holdings").upsert(plan.upserts, { onConflict: "account_id,symbol" });
   if (upsertErr) throw new Error(`Brex holdings upsert failed: ${upsertErr.message}`);
   applied.balances = plan.upserts.length;
+
+  for (const l of plan.liabilities) {
+    // Keyed on name so re-syncing updates the balance rather than duplicating.
+    const { data: found } = await supabase.from("liabilities").select("id").eq("name", l.name).maybeSingle();
+    const row = { ...l, updated_at: new Date().toISOString() };
+    const { error: liabErr } = found?.id
+      ? await supabase.from("liabilities").update(row).eq("id", found.id)
+      : await supabase.from("liabilities").insert(row);
+    if (liabErr) throw new Error(`Brex liability write failed: ${liabErr.message}`);
+    applied.liabilities += 1;
+  }
 
   if (plan.deletes.length) {
     const { error: delErr } = await supabase

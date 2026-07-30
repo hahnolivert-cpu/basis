@@ -57,6 +57,17 @@ export async function fetchBrexAccounts(token: string): Promise<BrexAccount[]> {
   }));
 }
 
+type RawCardAccount = { id: string; status: string; current_balance?: { amount?: number; currency?: string } };
+
+// `/v2/accounts/card` returns the live current balance for the statement
+// period in progress — unlike `/v2/accounts/card/primary/statements`, whose
+// most recent entry is the *last closed* statement and runs weeks stale.
+// Charge cards owe whatever's currently outstanding, not last month's total.
+export async function fetchBrexCardBalanceCents(token: string): Promise<number> {
+  const accounts = await brexGet<RawCardAccount[]>("/v2/accounts/card", token);
+  return accounts.filter((a) => a.status === "ACTIVE").reduce((s, a) => s + Math.round(a.current_balance?.amount ?? 0), 0);
+}
+
 // Brex reports Treasury yield as type DIVIDEND (it is a money-market fund), not
 // INTEREST — classifying only on /INTEREST/ silently filed every yield payment
 // as a transfer and dropped it out of the income card.

@@ -36,6 +36,7 @@ export type PlaidInstitutionPlan = {
   institution: string;
   accountId: string;
   upserts: HoldingWrite[];
+  liabilities: { name: string; amount_cents: number }[];
   deletes: { symbol: string; reason: string }[];
   noCostBasis: string[];
   warnings: string[];
@@ -43,7 +44,11 @@ export type PlaidInstitutionPlan = {
 
 type Supabase = ReturnType<typeof createServiceClient>;
 
-const isDepository = (a: PlaidAccount) => a.type === "depository" || a.type === "credit";
+// Only depository accounts are assets. A credit account's balance is money
+// OWED — counting it as cash overstates net worth by twice the balance, so those
+// go to the liabilities table instead.
+const isDepository = (a: PlaidAccount) => a.type === "depository";
+const isCredit = (a: PlaidAccount) => a.type === "credit";
 
 async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInstitutionPlan> {
   const warnings: string[] = [];
@@ -91,7 +96,14 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
     });
   }
 
+  // Credit balances are debts, not assets.
+  const liabilities = accounts.filter(isCredit).map((a) => ({
+    name: `${item.institution} ${a.name}${a.mask ? ` ··${a.mask}` : ""}`,
+    amount_cents: cents(Math.abs(a.balances.current ?? 0)),
+  }));
+
   // Investment holdings, where the item supports the product.
+  let marginCents = 0;
   try {
     const { holdings, securities } = await getInvestmentHoldings(item.access_token);
     const secById = new Map(securities.map((s) => [s.security_id, s]));
@@ -106,6 +118,16 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
       const assetClass = assetClassForSecurity(sec.type, sec.ticker_symbol);
       const value = h.institution_value ?? (h.institution_price ?? sec.close_price ?? 0) * h.quantity;
 
+      // A negative "cash" security is margin debt (negative buying power),
+      // not an asset — Plaid reports it this way rather than as a separate
+      // liability. Route it to liabilities like a Plaid credit-account
+      // balance instead of letting it sit inside Cash and understate net
+      // worth silently.
+      if (assetClass === "Cash" && value < 0) {
+        marginCents += cents(Math.abs(value));
+        continue;
+      }
+
       // Plaid often omits cost basis; recording 0 would show a fake 100% gain,
       // so fall back to market value (gain reads as zero) and report it.
       let costBasis = h.cost_basis;
@@ -113,6 +135,9 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
         noCostBasis.push(symbol);
         costBasis = value;
       }
+
+      // Closed positions come back as zero/zero; recording them adds noise.
+      if (!h.quantity && !value) continue;
 
       const prior = bySymbol.get(symbol);
       upserts.push({
@@ -130,6 +155,7 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
         updated_at: now,
       });
     }
+    if (marginCents > 0) liabilities.push({ name: `${item.institution} margin balance`, amount_cents: marginCents });
   } catch (e) {
     warnings.push(
       `no investment holdings for ${item.institution} — ${safeMessage(e)}`
@@ -152,7 +178,7 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
     );
   }
 
-  return { institution: item.institution, accountId: account.id, upserts, deletes, noCostBasis, warnings };
+  return { institution: item.institution, accountId: account.id, upserts, liabilities, deletes, noCostBasis, warnings };
 }
 
 export async function runPlaidSync({ dryRun = false }: { dryRun?: boolean } = {}) {
@@ -189,13 +215,14 @@ export async function runPlaidSync({ dryRun = false }: { dryRun?: boolean } = {}
           asset_class: u.asset_class,
         })),
         total: money(p.upserts.reduce((s, u) => s + u.value_cents, 0)),
+        liabilities: p.liabilities.map((l) => ({ name: l.name, amount: money(l.amount_cents) })),
         wouldDelete: p.deletes,
         warnings: p.warnings,
       })),
     };
   }
 
-  const applied = { positions: 0, deleted: 0 };
+  const applied = { positions: 0, deleted: 0, liabilities: 0 };
   const warnings: string[] = [];
 
   for (const plan of plans) {
@@ -212,6 +239,17 @@ export async function runPlaidSync({ dryRun = false }: { dryRun?: boolean } = {}
       .upsert(plan.upserts, { onConflict: "account_id,symbol" });
     if (upsertErr) throw new Error(`${plan.institution} holdings upsert failed: ${upsertErr.message}`);
     applied.positions += plan.upserts.length;
+
+    for (const l of plan.liabilities) {
+      // Keyed on name so re-syncing updates the balance rather than duplicating.
+      const { data: found } = await supabase.from("liabilities").select("id").eq("name", l.name).maybeSingle();
+      const row = { ...l, updated_at: new Date().toISOString() };
+      const { error: liabErr } = found?.id
+        ? await supabase.from("liabilities").update(row).eq("id", found.id)
+        : await supabase.from("liabilities").insert(row);
+      if (liabErr) throw new Error(`${plan.institution} liability write failed: ${liabErr.message}`);
+      applied.liabilities += 1;
+    }
 
     if (plan.deletes.length) {
       const { error: delErr } = await supabase
