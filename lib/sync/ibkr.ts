@@ -153,18 +153,23 @@ async function buildPlan(supabase: Supabase, statement: FlexStatement): Promise<
     );
   }
 
-  const newTransactions: TxnWrite[] = dated
-    .filter((t) => !known.has(t.externalId))
-    .map((t) => ({
-      external_id: t.externalId,
-      date: t.date,
-      type: t.type,
-      symbol: t.symbol,
-      amount_cents: cents(t.amount),
-      description: t.description,
-      qty: t.qty ?? null,
-      price_cents: t.price !== undefined ? cents(t.price) : null,
-    }));
+  // Upserts every dated transaction the statement returns, not just ones
+  // unseen before — IBKR's trade record is authoritative and unchanging, and
+  // re-upserting on the same external_id only overwrites with the same
+  // values, EXCEPT when a column was added after the row was first recorded
+  // (qty/price_cents here): a "skip if known" filter would freeze those rows
+  // at their pre-migration null forever, since a normal sync never re-visits
+  // a symbol it's already recorded.
+  const newTransactions: TxnWrite[] = dated.map((t) => ({
+    external_id: t.externalId,
+    date: t.date,
+    type: t.type,
+    symbol: t.symbol,
+    amount_cents: cents(t.amount),
+    description: t.description,
+    qty: t.qty ?? null,
+    price_cents: t.price !== undefined ? cents(t.price) : null,
+  }));
 
   return {
     account: { id: account.id, name: account.name },

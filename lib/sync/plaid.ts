@@ -220,11 +220,16 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
       }
       alreadyRecordedTransactions = known.size;
 
+      // Upserts every transaction Plaid returns in the lookback window, not
+      // just ones unseen before — same reasoning as the IBKR sync: a
+      // "skip if known" filter would leave qty/price_cents permanently null
+      // on any row recorded before those columns existed, since a normal
+      // sync never re-visits a transaction it already has.
       newTransactions = investment_transactions
         .map((t) => {
           const type = mapPlaidInvTxnType(t.type, t.subtype);
           const externalId = `plaid:${item.institution}:${t.investment_transaction_id}`;
-          if (!type || known.has(externalId)) return null;
+          if (!type) return null;
           const sec = t.security_id ? txnSecById.get(t.security_id) : undefined;
           return {
             external_id: externalId,
