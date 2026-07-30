@@ -263,6 +263,12 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
           bands={BUCKETS.map((b) => [b, BUCKET_COLOR[b]] as [string, string])}
           caption={`Investing ${usd(BUCKETS.reduce((s, b) => s + monthlyByBucket[b], 0))}/mo total across the buckets above`}
         />
+        <CompositionForecastCard
+          points={compositionForecast}
+          bands={BUCKETS.map((b) => [b, BUCKET_COLOR[b]] as [string, string])}
+          mode="dollar"
+          caption={`Ending at ${usd(BUCKETS.reduce((s, b) => s + (Number(compositionForecast.at(-1)?.[b]) || 0), 0))} total by ${compositionForecast.at(-1)?.m}`}
+        />
         <div style={{ fontSize: 11.5, color: T.inkSoft, marginTop: 8 }}>
           Deterministic compounding at a constant monthly contribution and return per bucket — a planning sketch, not a forecast.
         </div>
