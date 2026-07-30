@@ -30,7 +30,7 @@ const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "totalCurrent", label: "Total current", align: "right" },
   { key: "gainPct", label: "Gain since buy", align: "right" },
 ];
-const GRID = "1fr 1.3fr 0.8fr 0.75fr 0.65fr 0.85fr 0.85fr 0.95fr 1fr 1.2fr";
+const GRID = "0.9fr 0.7fr 0.8fr 0.75fr 0.7fr 0.9fr 0.9fr 1fr 1.05fr 1.25fr";
 
 // Filters default to the last 30 days across all asset classes — the most
 // relevant slice for "what have I been buying recently."
@@ -175,7 +175,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
 
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
-          <div style={{ minWidth: 960 }}>
+          <div style={{ minWidth: 900 }}>
             <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
               {COLS.map((c) => {
                 const active = sort.key === c.key;
@@ -213,9 +213,8 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "8px 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}
               >
                 <div style={{ fontFamily: mono, fontSize: 12, color: T.inkSoft }}>{t.date}</div>
-                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.name}>
+                <div style={{ fontFamily: mono, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.name}>
                   {formatTicker(t.symbol)}
-                  <span style={{ color: T.inkSoft, fontSize: 11, marginLeft: 6 }}>{t.name}</span>
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, color: t.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
                   {t.portfolio === "capital" ? "976 Capital" : "Personal"}
