@@ -1,3 +1,4 @@
+import { safeMessage } from "@/lib/http";
 import { createServiceClient } from "@/lib/supabase/service";
 import { assetClassForSecurity, getAccounts, getInvestmentHoldings, type PlaidAccount } from "@/lib/plaid";
 
@@ -131,7 +132,7 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
     }
   } catch (e) {
     warnings.push(
-      `no investment holdings for ${item.institution} — ${e instanceof Error ? e.message : String(e)}`
+      `no investment holdings for ${item.institution} — ${safeMessage(e)}`
     );
   }
 

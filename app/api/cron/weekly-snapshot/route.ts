@@ -1,3 +1,4 @@
+import { safeMessage } from "@/lib/http";
 import { NextResponse, type NextRequest } from "next/server";
 import { BASE_HOLDINGS } from "@/lib/data";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -85,14 +86,14 @@ export async function GET(request: NextRequest) {
       warnings.push(`${sync.failed} provider sync(s) failed — ${failures.join("; ")}`);
     }
   } catch (e) {
-    warnings.push(`provider sync failed — ${e instanceof Error ? e.message : String(e)}`);
+    warnings.push(`provider sync failed — ${safeMessage(e)}`);
   }
 
   let quotes: QuoteMap = {};
   try {
     quotes = (await getQuotes({ force: true })).quotes ?? {};
   } catch (e) {
-    warnings.push(`quote refresh failed, using snapshot values — ${e instanceof Error ? e.message : String(e)}`);
+    warnings.push(`quote refresh failed, using snapshot values — ${safeMessage(e)}`);
   }
 
   // Bucket the real synced holdings; the seed is only a pre-first-sync fallback.
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     if (db.length) source = db;
     else warnings.push("no holdings in database, bucketed the static seed");
   } catch (e) {
-    warnings.push(`holdings lookup failed, bucketed the static seed — ${e instanceof Error ? e.message : String(e)}`);
+    warnings.push(`holdings lookup failed, bucketed the static seed — ${safeMessage(e)}`);
   }
 
   const priced = source.map((h) => {

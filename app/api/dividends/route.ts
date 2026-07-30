@@ -1,4 +1,4 @@
-import { jsonNoStore } from "@/lib/http";
+import { jsonNoStore, safeMessage } from "@/lib/http";
 import { BASE_HOLDINGS } from "@/lib/data";
 import { getDbHoldings, quoteRefFor } from "@/lib/holdings";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -109,7 +109,7 @@ export async function GET() {
       yields[sym] = y;
       if (supabase) await supabase.from("dividend_cache").upsert({ symbol: sym, yield_pct: y, updated_at: today });
     } catch (e) {
-      errors.push(`Polygon: ${sym} request failed — ${e instanceof Error ? e.message : String(e)}`);
+      errors.push(`Polygon: ${sym} request failed — ${safeMessage(e)}`);
     }
   }
 

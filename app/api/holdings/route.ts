@@ -1,4 +1,4 @@
-import { jsonNoStore } from "@/lib/http";
+import { jsonNoStore, safeMessage } from "@/lib/http";
 import { getDbHoldings, type DbHolding } from "@/lib/holdings";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,6 @@ export async function GET() {
     return jsonNoStore({ holdings, source: "db" } satisfies HoldingsPayload);
   } catch (e) {
     // The client falls back to the static seed so the dashboard still renders.
-    return jsonNoStore({ holdings: [], source: "seed", error: e instanceof Error ? e.message : String(e) });
+    return jsonNoStore({ holdings: [], source: "seed", error: safeMessage(e) });
   }
 }

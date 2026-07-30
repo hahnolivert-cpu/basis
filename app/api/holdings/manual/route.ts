@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { jsonNoStore } from "@/lib/http";
+import { jsonNoStore, safeMessage } from "@/lib/http";
 import { createServiceClient } from "@/lib/supabase/service";
 import { quoteRefFor, SELF_CUSTODY_INSTITUTION } from "@/lib/holdings";
 import { getQuotes } from "@/lib/market";
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     return jsonNoStore({ symbol, qty, valueCents, pricedFrom, account: SELF_CUSTODY.name });
   } catch (e) {
-    return jsonNoStore({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return jsonNoStore({ error: safeMessage(e) }, { status: 500 });
   }
 }
 
@@ -132,6 +132,6 @@ export async function DELETE(request: NextRequest) {
     if (!count) return jsonNoStore({ error: `No manual holding named ${symbol}` }, { status: 404 });
     return jsonNoStore({ deleted: symbol });
   } catch (e) {
-    return jsonNoStore({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return jsonNoStore({ error: safeMessage(e) }, { status: 500 });
   }
 }

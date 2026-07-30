@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { jsonNoStore } from "@/lib/http";
+import { jsonNoStore, safeMessage } from "@/lib/http";
 import { exchangePublicToken } from "@/lib/plaid";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     return jsonNoStore({ institution, item_id, linked: true });
   } catch (e) {
-    return jsonNoStore({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+    return jsonNoStore({ error: safeMessage(e) }, { status: 502 });
   }
 }
 

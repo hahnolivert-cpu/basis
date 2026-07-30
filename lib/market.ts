@@ -1,3 +1,4 @@
+import { safeMessage } from "@/lib/http";
 import { BASE_HOLDINGS } from "./data";
 import { getDbHoldings, quoteRefFor } from "./holdings";
 
@@ -76,7 +77,7 @@ export async function getQuotes({ force = false }: { force?: boolean } = {}): Pr
       ? db.filter((h) => h.qty).map((h) => ({ sym: h.sym, cls: h.cls }))
       : BASE_HOLDINGS.filter((h) => h.qty).map((h) => ({ sym: h.sym, cls: h.cls }));
   } catch (e) {
-    errors.push(`holdings lookup failed, pricing seed symbols — ${e instanceof Error ? e.message : String(e)}`);
+    errors.push(`holdings lookup failed, pricing seed symbols — ${safeMessage(e)}`);
     priceable = BASE_HOLDINGS.filter((h) => h.qty).map((h) => ({ sym: h.sym, cls: h.cls }));
   }
 

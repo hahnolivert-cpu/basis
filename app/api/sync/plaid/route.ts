@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { jsonNoStore } from "@/lib/http";
+import { jsonNoStore, safeMessage } from "@/lib/http";
 import { runPlaidSync } from "@/lib/sync/plaid";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export async function GET() {
   try {
     return jsonNoStore(await runPlaidSync({ dryRun: true }));
   } catch (e) {
-    return jsonNoStore({ target: "plaid", error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+    return jsonNoStore({ target: "plaid", error: safeMessage(e) }, { status: 502 });
   }
 }
 
@@ -19,6 +19,6 @@ export async function POST(request: NextRequest) {
   try {
     return jsonNoStore(await runPlaidSync({ dryRun }));
   } catch (e) {
-    return jsonNoStore({ target: "plaid", error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+    return jsonNoStore({ target: "plaid", error: safeMessage(e) }, { status: 502 });
   }
 }

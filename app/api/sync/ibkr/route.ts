@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { jsonNoStore } from "@/lib/http";
+import { jsonNoStore, safeMessage } from "@/lib/http";
 import { runIbkrSync } from "@/lib/sync/ibkr";
 
 // IBKR generates statements asynchronously, so this polls and can run past the
@@ -12,7 +12,7 @@ export async function GET() {
   try {
     return jsonNoStore(await runIbkrSync({ dryRun: true }));
   } catch (e) {
-    return jsonNoStore({ target: "ibkr", error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+    return jsonNoStore({ target: "ibkr", error: safeMessage(e) }, { status: 502 });
   }
 }
 
@@ -21,6 +21,6 @@ export async function POST(request: NextRequest) {
   try {
     return jsonNoStore(await runIbkrSync({ dryRun }));
   } catch (e) {
-    return jsonNoStore({ target: "ibkr", error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+    return jsonNoStore({ target: "ibkr", error: safeMessage(e) }, { status: 502 });
   }
 }

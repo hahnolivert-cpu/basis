@@ -1,3 +1,4 @@
+import { safeMessage } from "@/lib/http";
 import { runIbkrSync } from "./ibkr";
 import { runBrexSync } from "./brex";
 import { runPlaidSync } from "./plaid";
@@ -19,7 +20,7 @@ export async function runAllSyncs({ dryRun = false }: { dryRun?: boolean } = {})
         const out = await t.run({ dryRun });
         return { target: t.name, ok: true, ...(out as object) };
       } catch (e) {
-        return { target: t.name, ok: false, error: e instanceof Error ? e.message : String(e) };
+        return { target: t.name, ok: false, error: safeMessage(e) };
       }
     })
   );
