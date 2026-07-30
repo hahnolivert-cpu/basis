@@ -49,6 +49,7 @@ export function CompositionForecastCard({
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const p = payload[0].payload as CompositionPoint;
+                const total = bands.reduce((s, [key]) => s + (Number(p[key]) || 0), 0);
                 return (
                   <div style={{ background: T.ink, color: "#fff", padding: "7px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
                     <div style={{ marginBottom: 3 }}>{p.m}</div>
@@ -63,6 +64,9 @@ export function CompositionForecastCard({
                         </div>
                       )
                     )}
+                    <div style={{ marginTop: 3, paddingTop: 3, borderTop: "1px solid rgba(255,255,255,0.25)", fontWeight: 600 }}>
+                      Total {usd(total)}
+                    </div>
                   </div>
                 );
               }}
