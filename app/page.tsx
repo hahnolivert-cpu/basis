@@ -6,7 +6,7 @@ import { T, mono, serif, sans } from "@/lib/theme";
 import { sign, usd } from "@/lib/format";
 import { estIrr } from "@/lib/calc";
 
-import { Delta } from "@/components/ui";
+import { Delta, Card, Eyebrow } from "@/components/ui";
 import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
@@ -106,26 +106,29 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{ marginTop: 22, display: "flex", alignItems: "flex-end", gap: 22, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontFamily: serif, fontWeight: 600, fontSize: 54, lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
-            <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>net worth · {usd(total)} assets − {usd(debts)} debts</div>
+        <Card style={{ marginTop: 22, padding: "26px 28px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
+            <div>
+              <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
+              <div style={{ fontFamily: serif, fontWeight: 600, fontSize: 54, lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
+              <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>{usd(total)} assets − {usd(debts)} debts</div>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap" }}>
+              <div style={{ padding: "0 22px 0 0", display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 10.5, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.1em" }}>1 day</span>
+                <Delta pct={dayPct} amt={dayAmt} size={15} />
+              </div>
+              <div style={{ padding: "0 22px", borderLeft: `1px solid ${T.line}`, display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 10.5, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.1em" }}>Invested · all time</span>
+                <Delta pct={gainPct} amt={gainAmt} size={15} />
+              </div>
+              <div style={{ padding: "0 0 0 22px", borderLeft: `1px solid ${T.line}`, display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 10.5, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.1em" }}>IRR · est. annualized</span>
+                <span style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 15 }}>{sign(irr, irr.toFixed(1))}%/yr</span>
+              </div>
+            </div>
           </div>
-          <div style={{ paddingBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-            <div>
-              <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>1 day</span>
-              <Delta pct={dayPct} amt={dayAmt} size={13.5} />
-            </div>
-            <div>
-              <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>Invested · all time</span>
-              <Delta pct={gainPct} amt={gainAmt} size={13.5} />
-            </div>
-            <div>
-              <span style={{ fontSize: 11, color: T.inkSoft, marginRight: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>IRR · est. annualized</span>
-              <span style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13.5 }}>{sign(irr, irr.toFixed(1))}%/yr</span>
-            </div>
-          </div>
-        </div>
+        </Card>
 
         <div style={{ display: "flex", gap: 4, marginTop: 26, borderBottom: `1px solid ${T.line}` }}>
           {TABS.map(([id, label]) => (
@@ -143,16 +146,24 @@ export default function Home() {
           ))}
         </div>
 
-        {tab === "networth" && <NetWorthTab holdings={holdings} debts={debts} lookThrough={lookThrough} setLookThrough={setLookThrough} />}
+        {tab === "networth" && (
+          <NetWorthTab
+            holdings={holdings}
+            debts={debts}
+            liabilities={liabilityData?.liabilities ?? []}
+            lookThrough={lookThrough}
+            setLookThrough={setLookThrough}
+          />
+        )}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
         {tab === "tracking" && <TrackingTab />}
         {tab === "scenarios" && <ScenarioTab startNW={startNW} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
-          Positions come from IBKR Flex and the Brex API; prices are live via Finnhub (stocks/ETFs) and CoinGecko
-          (crypto), polled every 60s, with dividend yields from Polygon cached daily. Weekly history is real, imported
-          from the spreadsheet and continued by the Sunday job, and debts are maintained in the liabilities table. Chase and
-          Robinhood are absent until Plaid is connected — no estimates stand in for them. Sector and geography read
+          Positions come from IBKR Flex, the Brex API, and Plaid (Chase, Robinhood); prices are live via Finnhub
+          (stocks/ETFs) and CoinGecko (crypto), polled every 60s, with dividend yields from Polygon cached daily.
+          Weekly history is real, imported from the spreadsheet and continued by the Sunday job, and debts are
+          maintained in the liabilities table. Sector and geography read
           Unclassified where a provider doesn&apos;t label them, and ETF look-through only covers funds with
           constituent weights on file.
         </div>

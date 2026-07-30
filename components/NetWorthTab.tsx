@@ -1,28 +1,35 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
 import { T, mono, serif } from "@/lib/theme";
 import { sign, usd, usdK } from "@/lib/format";
-import { aggregate, mergeBySym, LIQ_TIER } from "@/lib/calc";
+import { aggregate, mergeBySym, positionsForSegment } from "@/lib/calc";
 
+import { formatTicker } from "@/lib/holdings";
 import { toRows } from "@/lib/weekly";
 import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
-import { Card, Eyebrow, Toggle } from "@/components/ui";
+import { Card, Eyebrow, Toggle, Modal } from "@/components/ui";
 import { CompositionCard } from "@/components/charts/CompositionCard";
 import { SignedBarCard } from "@/components/charts/SignedBarCard";
 import { ConcentrationCard } from "@/components/charts/ConcentrationCard";
 import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard";
 import { TrueExposureCard } from "@/components/charts/TrueExposureCard";
+import { NetWorthFlowCard } from "@/components/charts/NetWorthFlowCard";
 import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
 import type { Holding } from "@/lib/types";
+import type { Liability } from "@/app/api/liabilities/route";
+
+type Drilldown = { title: string; dim: "class" | "sector" | "geo"; keys: string[] };
 
 export function NetWorthTab({
   holdings,
   debts,
+  liabilities,
   lookThrough,
   setLookThrough,
 }: {
   holdings: Holding[];
   debts: number;
+  liabilities: Liability[];
   lookThrough: boolean;
   setLookThrough: (v: boolean) => void;
 }) {
@@ -30,14 +37,44 @@ export function NetWorthTab({
   const capital = holdings.filter((h) => h.pf === "capital").reduce((s, h) => s + h.value, 0);
   const personal = total - capital;
   const income = holdings.reduce((s, h) => s + (h.value * h.yld) / 100, 0);
-  const byClass = aggregate(holdings, "class", false);
-  const bySector = aggregate(holdings, "sector", lookThrough);
-  const byGeo = aggregate(holdings, "geo", lookThrough);
-  const incomeRows = holdings
+
+  // Each composition chart gets its own Crypto/Cash include toggles rather
+  // than one global control — Asset Class and Geography default to showing
+  // both (they're meaningful buckets there), Sector defaults to excluding
+  // both (neither has a real GICS sector).
+  const filterHoldings = (rows: Holding[], includeCrypto: boolean, includeCash: boolean) =>
+    rows.filter((h) => (includeCrypto || h.cls !== "Crypto") && (includeCash || h.cls !== "Cash"));
+
+  const [classIncludeCrypto, setClassIncludeCrypto] = useState(true);
+  const [classIncludeCash, setClassIncludeCash] = useState(true);
+  const classHoldings = filterHoldings(holdings, classIncludeCrypto, classIncludeCash);
+  const classTotal = classHoldings.reduce((s, h) => s + h.value, 0);
+  const byClass = aggregate(classHoldings, "class", false);
+
+  const [sectorIncludeCrypto, setSectorIncludeCrypto] = useState(false);
+  const [sectorIncludeCash, setSectorIncludeCash] = useState(false);
+  const sectorHoldings = filterHoldings(holdings, sectorIncludeCrypto, sectorIncludeCash);
+  const sectorTotal = sectorHoldings.reduce((s, h) => s + h.value, 0);
+  const bySector = aggregate(sectorHoldings, "sector", lookThrough);
+
+  const [geoIncludeCrypto, setGeoIncludeCrypto] = useState(true);
+  const [geoIncludeCash, setGeoIncludeCash] = useState(true);
+  const geoHoldings = filterHoldings(holdings, geoIncludeCrypto, geoIncludeCash);
+  const geoTotal = geoHoldings.reduce((s, h) => s + h.value, 0);
+  const byGeo = aggregate(geoHoldings, "geo", lookThrough);
+  // Merged by symbol first — otherwise a position split across two accounts
+  // (e.g. STRC at both IBKR and Robinhood) shows up as two separate rows.
+  const incomeRows = mergeBySym(holdings)
     .filter((h) => h.yld > 0)
     .map((h) => ({ ...h, inc: (h.value * h.yld) / 100 }))
     .sort((a, b) => b.inc - a.inc);
   const startNW = total - debts;
+  const [drilldown, setDrilldown] = useState<Drilldown | null>(null);
+  const openDrilldown = (title: string, dim: Drilldown["dim"]) => (name: string, foldedNames: string[]) =>
+    setDrilldown({ title: `${title} · ${name}`, dim, keys: foldedNames });
+  const drilldownHoldings =
+    drilldown?.dim === "geo" ? geoHoldings : drilldown?.dim === "sector" ? sectorHoldings : drilldown?.dim === "class" ? classHoldings : holdings;
+  const drilldownRows = drilldown ? positionsForSegment(drilldownHoldings, drilldown.dim, drilldown.keys, lookThrough) : [];
   // IBKR reports the Paxos crypto as "BTC.USD-PAXOS"; match either dialect.
   const btcHolding = holdings.find((h) => h.sym.split(/[.\-/]/)[0].toUpperCase() === "BTC");
   const btcPx = btcHolding?.qty ? btcHolding.value / btcHolding.qty : 63817;
@@ -70,7 +107,14 @@ export function NetWorthTab({
               <span style={{ fontFamily: mono }}>{usd(v)} <span style={{ color: T.inkSoft }}>· {((v / total) * 100).toFixed(1)}%</span></span>
             </div>
           ))}
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", fontSize: 13.5, color: T.loss }}>
+          {liabilities.length > 0 &&
+            liabilities.map((l) => (
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12, color: T.inkSoft }}>
+                <span>{l.name}</span>
+                <span style={{ fontFamily: mono, color: T.loss }}>−{usd(l.amount_cents / 100).slice(1)}</span>
+              </div>
+            ))}
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", fontSize: 13.5, color: T.loss, fontWeight: liabilities.length > 1 ? 600 : 400 }}>
             <span>Debts</span><span style={{ fontFamily: mono }}>−{usd(debts).slice(1)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0 0", fontSize: 14, fontWeight: 600 }}>
@@ -83,14 +127,16 @@ export function NetWorthTab({
           <Eyebrow>Est. dividends &amp; interest</Eyebrow>
           <div style={{ fontFamily: serif, fontSize: 34, fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.inkSoft, fontFamily: "inherit" }}> / yr</span></div>
           <div style={{ fontSize: 12.5, color: T.inkSoft, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {usd(income / 12)} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
-          {incomeRows.slice(0, 5).map((h) => (
+          {incomeRows.slice(0, 10).map((h) => (
             <div key={h.sym + h.acct} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 0", borderBottom: `1px solid ${T.line}` }}>
-              <span>{h.sym} <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 11 }}>{h.yld}%</span></span>
+              <span>{h.sym} <span style={{ color: T.inkSoft, fontFamily: mono, fontSize: 11 }}>{h.yld.toFixed(2)}%</span></span>
               <span style={{ fontFamily: mono }}>{usd(h.inc)}</span>
             </div>
           ))}
         </Card>
       </div>
+
+      <NetWorthFlowCard holdings={holdings} debts={debts} />
 
       {/* Net worth evolution — real weekly closes */}
       <Card style={{ marginTop: 16 }}>
@@ -135,11 +181,46 @@ export function NetWorthTab({
         <Toggle on={lookThrough} setOn={setLookThrough} label="Look through ETFs" />
       </div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        <CompositionCard title="Asset class" data={byClass} total={total} donut />
-        <CompositionCard title="Sector — true exposure" data={bySector} total={total} />
-        <CompositionCard title="Geography — true exposure" data={byGeo} total={total} />
+        <CompositionCard
+          title="Asset class"
+          data={byClass}
+          total={classTotal}
+          donut
+          onSegmentClick={openDrilldown("Asset class", "class")}
+          headerRight={
+            <div style={{ display: "flex", gap: 6 }}>
+              <Toggle on={classIncludeCrypto} setOn={setClassIncludeCrypto} label="Crypto" />
+              <Toggle on={classIncludeCash} setOn={setClassIncludeCash} label="Cash" />
+            </div>
+          }
+        />
+        <CompositionCard
+          title="Sector — true exposure"
+          data={bySector}
+          total={sectorTotal}
+          onSegmentClick={openDrilldown("Sector", "sector")}
+          headerRight={
+            <div style={{ display: "flex", gap: 6 }}>
+              <Toggle on={sectorIncludeCrypto} setOn={setSectorIncludeCrypto} label="Crypto" />
+              <Toggle on={sectorIncludeCash} setOn={setSectorIncludeCash} label="Cash" />
+            </div>
+          }
+        />
+        <CompositionCard
+          title="Geography — true exposure"
+          data={byGeo}
+          total={geoTotal}
+          minPct={3}
+          onSegmentClick={openDrilldown("Geography", "geo")}
+          headerRight={
+            <div style={{ display: "flex", gap: 6 }}>
+              <Toggle on={geoIncludeCrypto} setOn={setGeoIncludeCrypto} label="Crypto" />
+              <Toggle on={geoIncludeCash} setOn={setGeoIncludeCash} label="Cash" />
+            </div>
+          }
+        />
       </div>
-      <TrueExposureCard holdings={holdings} />
+      <TrueExposureCard holdings={holdings} netWorth={startNW} />
 
       {/* Analytics */}
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 30, marginBottom: 14 }}>Analytics</div>
@@ -147,37 +228,41 @@ export function NetWorthTab({
         <ConcentrationCard holdings={holdings} total={total} />
         <SignedBarCard
           title="Day change attribution · top movers"
-          rows={mergeBySym(holdings)
-            .map((h) => ({ name: h.sym, v: Math.round((h.value * h.day) / 100) }))
-            .filter((d) => d.v !== 0)
-            .sort((a, b) => Math.abs(b.v) - Math.abs(a.v))
-            .slice(0, 7)}
-          fmtV={(v) => sign(v, usd(v))}
-          note="Which positions actually moved the number today."
-        />
-      </div>
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
-        <CompositionCard
-          title="Liquidity tiers"
-          data={(() => {
-            const m: Record<string, number> = {};
-            holdings.forEach((h) => { const k = LIQ_TIER(h); m[k] = (m[k] || 0) + h.value; });
-            return Object.entries(m).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a, b) => b.value - a.value);
+          rows={(() => {
+            const ranked = mergeBySym(holdings)
+              .map((h) => ({ name: formatTicker(h.sym), v: Math.round((h.value * h.day) / 100) }))
+              .filter((d) => d.v !== 0)
+              .sort((a, b) => b.v - a.v);
+            return ranked.length <= 12 ? ranked : [...ranked.slice(0, 6), ...ranked.slice(-6)];
           })()}
-          total={total}
-          donut
-        />
-        <SignedBarCard
-          title="Unrealized gain/loss ladder · %"
-          rows={mergeBySym(holdings)
-            .filter((h) => h.cls !== "Cash")
-            .map((h) => ({ name: h.sym, v: +(((h.value - h.cost) / h.cost) * 100).toFixed(1) }))
-            .sort((a, b) => b.v - a.v)}
-          fmtV={(v) => sign(v, v + "%")}
-          note="Bottom of the ladder doubles as a tax-loss-harvesting shortlist."
+          fmtV={(v) => sign(v, usd(v))}
         />
       </div>
       {weeklyRows.length > 0 && <AllocationHistoryCard rows={weeklyRows} />}
+
+      {drilldown && (
+        <Modal title={drilldown.title} onClose={() => setDrilldown(null)}>
+          {drilldownRows.length === 0 ? (
+            <div style={{ fontSize: 13, color: T.inkSoft }}>No positions found.</div>
+          ) : (
+            drilldownRows.map((p, i) => (
+              <div
+                key={`${p.sym}-${p.via ?? ""}-${i}`}
+                style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}
+              >
+                <span>
+                  <span style={{ fontWeight: 600 }}>{p.sym}</span>
+                  <span style={{ color: T.inkSoft, fontSize: 11.5, marginLeft: 8 }}>
+                    {p.name}
+                    {p.via ? ` · via ${p.via}` : ""}
+                  </span>
+                </span>
+                <span style={{ fontFamily: mono }}>{usd(p.value)}</span>
+              </div>
+            ))
+          )}
+        </Modal>
+      )}
     </div>
   );
 }
