@@ -51,25 +51,6 @@ export const BASE_HOLDINGS: Holding[] = [
 
 export const DEBTS = 24271;
 
-// Mock net-worth history (monthly closes, $k) — real build derives this
-// from daily snapshots of synced balances.
-export const NW_HISTORY = (
-  [
-    ["Jan 25", 742], ["Feb 25", 768], ["Mar 25", 751], ["Apr 25", 803],
-    ["May 25", 842], ["Jun 25", 861], ["Jul 25", 894], ["Aug 25", 872],
-    ["Sep 25", 918], ["Oct 25", 967], ["Nov 25", 1004], ["Dec 25", 1051],
-    ["Jan 26", 1032], ["Feb 26", 1069], ["Mar 26", 1046], ["Apr 26", 1088],
-    ["May 26", 1121], ["Jun 26", 1107], ["Jul 26", 1128],
-  ] as [string, number][]
-).map(([m, v]) => ({ m, v: v * 1000 }));
-
-// Mock monthly allocation weights (%), drifting toward today's mix.
-export const DRIFT = NW_HISTORY.map((p, i, arr) => {
-  const t = i / (arr.length - 1);
-  const lerp = (a: number, b: number) => +(a + (b - a) * t).toFixed(1);
-  return { m: p.m, Cash: lerp(46, 37.8), ETFs: lerp(35, 40.6), Stocks: lerp(13, 11.9), Crypto: lerp(6, 9.7) };
-});
-
 // Historical EURUSD and BTCUSD closes now live in the weekly_snapshots table
 // (usd_to_eur / btc_price_usd), seeded from the spreadsheet export — see
 // scripts/import-weekly-snapshots.mjs. CurrencyLensCard reads them through

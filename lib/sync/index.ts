@@ -1,10 +1,12 @@
 import { runIbkrSync } from "./ibkr";
+import { runBrexSync } from "./brex";
 
-// Every provider sync, run in-process. Add Brex and Plaid (Chase + Robinhood)
-// here as they land; the dashboard button and the weekly cron both go through
-// runAllSyncs so they stay in step automatically.
+// Every provider sync, run in-process. Add Plaid (Chase + Robinhood) here as it
+// lands; the dashboard button and the weekly cron both go through runAllSyncs so
+// they stay in step automatically.
 const TARGETS: { name: string; run: (opts: { dryRun: boolean }) => Promise<unknown> }[] = [
   { name: "ibkr", run: runIbkrSync },
+  { name: "brex", run: runBrexSync },
 ];
 
 export type SyncRunResult = { target: string; ok: boolean; error?: string; [k: string]: unknown };

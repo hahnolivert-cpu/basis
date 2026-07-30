@@ -1,14 +1,16 @@
+import { useMemo } from "react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
 import { T, mono, serif } from "@/lib/theme";
 import { sign, usd, usdK } from "@/lib/format";
 import { aggregate, mergeBySym, LIQ_TIER } from "@/lib/calc";
-import { DEBTS, NW_HISTORY } from "@/lib/data";
+import { DEBTS } from "@/lib/data";
+import { toRows } from "@/lib/weekly";
+import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
 import { Card, Eyebrow, Toggle } from "@/components/ui";
-import { ChartTip } from "@/components/charts/ChartTip";
 import { CompositionCard } from "@/components/charts/CompositionCard";
 import { SignedBarCard } from "@/components/charts/SignedBarCard";
 import { ConcentrationCard } from "@/components/charts/ConcentrationCard";
-import { DriftCard } from "@/components/charts/DriftCard";
+import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard";
 import { TrueExposureCard } from "@/components/charts/TrueExposureCard";
 import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
 import type { Holding } from "@/lib/types";
@@ -34,8 +36,14 @@ export function NetWorthTab({
     .map((h) => ({ ...h, inc: (h.value * h.yld) / 100 }))
     .sort((a, b) => b.inc - a.inc);
   const startNW = total - DEBTS;
-  const btcHolding = holdings.find((h) => h.sym === "BTC");
+  // IBKR reports the Paxos crypto as "BTC.USD-PAXOS"; match either dialect.
+  const btcHolding = holdings.find((h) => h.sym.split(/[.\-/]/)[0].toUpperCase() === "BTC");
   const btcPx = btcHolding?.qty ? btcHolding.value / btcHolding.qty : 63817;
+
+  // Real weekly history from weekly_snapshots — the evolution and allocation
+  // charts were previously drawn from mock arrays in lib/data.ts.
+  const { data: weekly } = useWeeklySnapshots();
+  const weeklyRows = useMemo(() => toRows(weekly?.snapshots ?? []), [weekly]);
 
   return (
     <div>
@@ -82,26 +90,40 @@ export function NetWorthTab({
         </Card>
       </div>
 
-      {/* Net worth evolution */}
+      {/* Net worth evolution — real weekly closes */}
       <Card style={{ marginTop: 16 }}>
-        <Eyebrow>Net worth evolution · 19 months</Eyebrow>
-        <div style={{ height: 220 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={NW_HISTORY} margin={{ left: 8, right: 8, top: 6 }}>
-              <defs>
-                <linearGradient id="nw" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={T.ledger} stopOpacity={0.28} />
-                  <stop offset="100%" stopColor={T.ledger} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke={T.line} vertical={false} />
-              <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={2} />
-              <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} width={52} domain={["dataMin - 60000", "dataMax + 40000"]} />
-              <Tooltip content={<ChartTip />} />
-              <Area type="monotone" dataKey="v" stroke={T.ledger} strokeWidth={2} fill="url(#nw)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        <Eyebrow>Net worth evolution · {weeklyRows.length} weeks</Eyebrow>
+        {weeklyRows.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: T.inkSoft, fontFamily: mono }}>
+            Awaiting weekly history — see the Tracking tab.
+          </div>
+        ) : (
+          <div style={{ height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={weeklyRows} margin={{ left: 8, right: 8, top: 6 }}>
+                <defs>
+                  <linearGradient id="nw" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={T.ledger} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={T.ledger} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={T.line} vertical={false} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} interval={6} />
+                <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.inkSoft, fontFamily: mono }} width={52} domain={["dataMin - 60000", "dataMax + 40000"]} />
+                <Tooltip
+                  content={({ active, payload }) =>
+                    active && payload?.length ? (
+                      <div style={{ background: T.ink, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
+                        {payload[0].payload.date}: {usd(payload[0].payload.total)}
+                      </div>
+                    ) : null
+                  }
+                />
+                <Area type="monotone" dataKey="total" stroke={T.ledger} strokeWidth={2} fill="url(#nw)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </Card>
       <CurrencyLensCard startNW={startNW} btcPx={btcPx} />
 
@@ -153,7 +175,7 @@ export function NetWorthTab({
           note="Bottom of the ladder doubles as a tax-loss-harvesting shortlist."
         />
       </div>
-      <DriftCard />
+      {weeklyRows.length > 0 && <AllocationHistoryCard rows={weeklyRows} />}
     </div>
   );
 }

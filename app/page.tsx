@@ -137,10 +137,11 @@ export default function Home() {
         {tab === "scenarios" && <ScenarioTab startNW={startNW} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
-          Prices are live via Finnhub (stocks/ETFs) and CoinGecko (crypto), polled every 60s; dividend yields are
-          from Polygon, cached daily. Share counts, history, and drift are still (est.) placeholders. Cash balances
-          stay at snapshot values until real account APIs are wired in (Brex + IBKR direct, Chase + Robinhood via
-          Plaid).
+          Positions come from IBKR Flex and the Brex API; prices are live via Finnhub (stocks/ETFs) and CoinGecko
+          (crypto), polled every 60s, with dividend yields from Polygon cached daily. Weekly history is real, imported
+          from the spreadsheet and continued by the Sunday job. Chase and Robinhood are still (est.) estimates until
+          Plaid is connected. Sector and geography are unclassified for holdings the providers don&apos;t label, and
+          ETF look-through uses top-10 approximations.
         </div>
       </div>
     </div>
