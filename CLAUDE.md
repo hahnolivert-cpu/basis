@@ -70,7 +70,8 @@ still needs to be added to `.env.local` before any server route can use it.
 - **Money is stored as integer cents**, not floats/dollars, to avoid rounding drift.
   (Note: the current `BASE_HOLDINGS` prototype data is still in dollars as ported
   from the design reference — convert to cents when real data sources replace it.)
-- **The UI must always match [design-reference/prototype.jsx](design-reference/prototype.jsx).**
-  That file is the visual source of truth: Fraunces + IBM Plex Mono fonts, the green
-  ledger color palette, spacing, and layout. Any UI change should be checked against
-  it before merging.
+- **The UI should track [design-reference/prototype.jsx](design-reference/prototype.jsx)** for the
+  green ledger color palette, spacing, and layout, with one deliberate departure: text uses
+  the system font stack (SF Pro on Apple devices) everywhere, including headings, rather than
+  the prototype's bundled Fraunces serif — see [lib/theme.ts](lib/theme.ts). IBM Plex Mono
+  stays for numerals.

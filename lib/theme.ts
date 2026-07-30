@@ -12,5 +12,11 @@ export const T = {
 } as const;
 
 export const mono = "var(--font-ibm-plex-mono), ui-monospace, monospace";
-export const serif = "var(--font-fraunces), Georgia, serif";
-export const sans = "var(--font-inter), system-ui, sans-serif";
+// System font stack — resolves to real SF Pro on macOS/iOS/iPadOS (Safari and
+// Chrome both honor -apple-system/BlinkMacSystemFont), Segoe UI on Windows,
+// Roboto on Android. SF Pro itself can't be bundled: it isn't on Google Fonts
+// and Apple's license doesn't permit self-hosting it for general web use.
+export const sans = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, system-ui, sans-serif";
+// Headings previously used a bundled serif (Fraunces); the app now uses one
+// system font everywhere, including headlines, so this aliases `sans`.
+export const serif = sans;
