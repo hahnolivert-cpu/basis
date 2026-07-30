@@ -32,7 +32,25 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Single-user app: being authenticated is not sufficient, the session must
+  // belong to the owner. Signups are disabled at the Supabase project level,
+  // but this is the second lock — without it any account that ever gets created
+  // could read the whole portfolio. Unset means no restriction, so a missing
+  // env var can't lock the owner out of their own dashboard.
+  const owner = process.env.BASIS_OWNER_EMAIL?.trim().toLowerCase();
+  const isOwner = !owner || user?.email?.trim().toLowerCase() === owner;
+
   const { pathname } = request.nextUrl;
+
+  if (user && !isOwner) {
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("denied", "1");
+    return NextResponse.redirect(url);
+  }
 
   if (pathname.startsWith("/api")) {
     if (!user) {

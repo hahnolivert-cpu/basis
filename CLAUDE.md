@@ -1,8 +1,21 @@
 # Basis
 
 Single-user personal portfolio and net worth tracker — no multi-tenancy. Auth is
-Supabase email/password (`@supabase/ssr`, cookie-based sessions); sign-ups are
-disabled in [lib/auth-config.ts](lib/auth-config.ts) once the one account exists.
+Supabase email/password (`@supabase/ssr`, cookie-based sessions).
+
+### Access control — two locks, both required
+
+1. **Sign-ups are disabled at the Supabase project level** (`disable_signup`).
+   Hiding the form via `SIGNUPS_ENABLED` in [lib/auth-config.ts](lib/auth-config.ts)
+   is *not* sufficient: the anon key ships in the browser bundle by design, so
+   `POST /auth/v1/signup` stays reachable and anyone could self-register.
+2. **`BASIS_OWNER_EMAIL` gates the middleware.** Being authenticated is not
+   enough — the session must belong to the owner, or any account that ever gets
+   created could read the whole portfolio. Unset means no restriction, so a
+   missing env var cannot lock the owner out.
+
+Supabase Auth `site_url` must point at the deployed domain, otherwise password
+reset and confirmation emails link to localhost.
 
 ## Data sources (planned)
 
