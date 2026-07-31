@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useSWRConfig } from "swr";
 import { T, mono, serif } from "@/lib/theme";
 import { usd } from "@/lib/format";
-import { Card, Eyebrow } from "@/components/ui";
+import { Card, Eyebrow, Toggle } from "@/components/ui";
 import type { Holding } from "@/lib/types";
 
 // Matched on institution, not is_manual: seeded provider estimates also carry
@@ -40,6 +40,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
   const [name, setName] = useState("");
   const [qty, setQty] = useState("");
   const [costBasis, setCostBasis] = useState("");
+  const [value, setValue] = useState("");
   const [assetClass, setAssetClass] = useState("Crypto");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
       const res = await fetch("/api/holdings/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol, name, qty, costBasis, assetClass }),
+        body: JSON.stringify({ symbol, name, qty, costBasis, value, assetClass }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -74,8 +75,29 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
         setName("");
         setQty("");
         setCostBasis("");
+        setValue("");
         await refresh();
       }
+    } catch (err) {
+      setFailed(true);
+      setNote(err instanceof Error ? err.message : String(err));
+    }
+    setBusy(false);
+  };
+
+  const toggleIncluded = async (sym: string, included: boolean) => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const res = await fetch("/api/holdings/manual", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol: sym, includedInNetWorth: included }),
+      });
+      const body = await res.json();
+      setFailed(!res.ok);
+      setNote(res.ok ? `${sym} ${included ? "included in" : "excluded from"} net worth` : (body.error ?? "Could not update"));
+      if (res.ok) await refresh();
     } catch (err) {
       setFailed(true);
       setNote(err instanceof Error ? err.message : String(err));
@@ -156,6 +178,19 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
               style={inputStyle}
             />
           </div>
+          <div style={{ flex: "0 0 130px" }}>
+            <label style={labelStyle}>Current value $</label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="leave blank to use live price / cost"
+              title="For an illiquid asset with no live quote — overrides cost basis as the current mark."
+              style={inputStyle}
+            />
+          </div>
           <div style={{ flex: "0 0 120px" }}>
             <label style={labelStyle}>Class</label>
             <select value={assetClass} onChange={(e) => setAssetClass(e.target.value)} style={inputStyle}>
@@ -200,6 +235,11 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
               <span style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <span style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{h.qty}</span>
                 <span style={{ fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</span>
+                <Toggle
+                  on={h.includedInNetWorth}
+                  setOn={(v) => toggleIncluded(h.sym, v)}
+                  label={h.includedInNetWorth ? "In net worth" : "Excluded"}
+                />
                 <button
                   onClick={() => remove(h.sym)}
                   disabled={busy}

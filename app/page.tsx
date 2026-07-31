@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { T, mono, serif, sans } from "@/lib/theme";
 import { sign, usd } from "@/lib/format";
@@ -35,12 +35,19 @@ export default function Home() {
   const { holdings } = useEnrichedHoldings();
   const { data: liabilityData } = useLiabilities();
 
-  const total = holdings.reduce((s, h) => s + h.value, 0);
-  const dayAmt = holdings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
+  // A holding toggled out of net worth (e.g. a highly uncertain angel
+  // investment) stays visible in the Holdings tab but drops out of net
+  // worth and every chart — everything below reads this filtered list, not
+  // the raw one. Holdings keeps the full list so the excluded row is still
+  // there to toggle back on.
+  const netWorthHoldings = useMemo(() => holdings.filter((h) => h.includedInNetWorth !== false), [holdings]);
+
+  const total = netWorthHoldings.reduce((s, h) => s + h.value, 0);
+  const dayAmt = netWorthHoldings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
   const dayPct = (dayAmt / (total - dayAmt)) * 100;
   const debts = (liabilityData?.totalCents ?? 0) / 100;
   const startNW = total - debts;
-  const inv = holdings.filter((h) => h.cls !== "Cash");
+  const inv = netWorthHoldings.filter((h) => h.cls !== "Cash");
   const invVal = inv.reduce((s, h) => s + h.value, 0);
   const invCost = inv.reduce((s, h) => s + h.cost, 0);
   const gainAmt = invVal - invCost;
@@ -143,7 +150,7 @@ export default function Home() {
 
         {tab === "networth" && (
           <NetWorthTab
-            holdings={holdings}
+            holdings={netWorthHoldings}
             debts={debts}
             liabilities={liabilityData?.liabilities ?? []}
             lookThrough={lookThrough}
@@ -152,8 +159,8 @@ export default function Home() {
         )}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
         {tab === "tracking" && <TrackingTab />}
-        {tab === "earnings" && <EarningsTab holdings={holdings} />}
-        {tab === "scenarios" && <ScenarioTab startNW={startNW} holdings={holdings} />}
+        {tab === "earnings" && <EarningsTab holdings={netWorthHoldings} />}
+        {tab === "scenarios" && <ScenarioTab startNW={startNW} holdings={netWorthHoldings} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
           Positions come from IBKR Flex, the Brex API, and Plaid (Chase, Robinhood); prices are live via Finnhub

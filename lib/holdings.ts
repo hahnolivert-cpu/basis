@@ -17,6 +17,7 @@ type Row = {
   geo: string | null;
   yield_pct: number;
   is_manual: boolean;
+  included_in_net_worth: boolean;
   accounts: { name: string; portfolio: string; institution: string } | null;
 };
 
@@ -166,6 +167,7 @@ function mapRow(r: Row): DbHolding {
     etf: ETF_DATA[etfKey] ? etfKey : undefined,
     yld: Number(r.yield_pct) || (r.symbol === "IBKR Cash" ? ibkrCashYield(r.value_cents) : CASH_APY_ESTIMATE[r.symbol]) || 0,
     isManual: r.is_manual,
+    includedInNetWorth: r.included_in_net_worth,
     institution: r.accounts?.institution ?? "Unknown",
     isEtf: looksLikeFund(r.symbol, r.name),
     hasLookThrough: Boolean(ETF_DATA[etfKey]),
@@ -177,7 +179,9 @@ export async function getDbHoldings(): Promise<DbHolding[]> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("holdings")
-    .select("symbol, name, qty, cost_basis_cents, value_cents, asset_class, sector, geo, yield_pct, is_manual, accounts(name, portfolio, institution)")
+    .select(
+      "symbol, name, qty, cost_basis_cents, value_cents, asset_class, sector, geo, yield_pct, is_manual, included_in_net_worth, accounts(name, portfolio, institution)"
+    )
     .returns<Row[]>();
   if (error) throw new Error(error.message);
   return (data ?? []).map(mapRow);

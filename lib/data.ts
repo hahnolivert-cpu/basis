@@ -120,7 +120,9 @@ export const GEO_BY_SYMBOL: Record<string, string> = {
 };
 
 // qty = share/coin count implied by screenshot values; live sync (future) reprices qty x price.
-export const BASE_HOLDINGS: Holding[] = [
+// This is a static pre-sync fallback, so every row is unconditionally counted.
+export const BASE_HOLDINGS: Holding[] = (
+  [
   // ---- 976 Capital · Cash (Brex) ----
   { sym: "Brex Checking", name: "Primary checking ··1593", pf: "capital", acct: "Brex", cls: "Cash", value: 3057, cost: 3057, day: 0, sector: "Cash", geo: "United States", yld: 0 },
   { sym: "Brex Treasury", name: "Treasury ··5461", pf: "capital", acct: "Brex", cls: "Cash", value: 370714, cost: 370714, day: 0.01, sector: "Cash", geo: "United States", yld: 4.3 },
@@ -144,7 +146,8 @@ export const BASE_HOLDINGS: Holding[] = [
   { sym: "GOOGL", qty: 76.53, name: "Alphabet Inc. (est.)", pf: "personal", acct: "Robinhood", cls: "Equities", value: 15000, cost: 12000, day: 2.5, sector: "Comm. Services", geo: "United States", yld: 0.45 },
   { sym: "LINK", qty: 4209.17, name: "Chainlink · USD", pf: "personal", acct: "Robinhood", cls: "Crypto", value: 67346.66, cost: 101728.45, day: -3.09, sector: "Crypto", geo: "Global", yld: 0 },
   { sym: "HYPE", qty: 561.34, name: "Hyperliquid · USD", pf: "personal", acct: "Robinhood", cls: "Crypto", value: 23576.44, cost: 18184.95, day: -3.51, sector: "Crypto", geo: "Global", yld: 0 },
-];
+  ] as Omit<Holding, "includedInNetWorth">[]
+).map((h) => ({ ...h, includedInNetWorth: true }));
 
 // Debts now live in the liabilities table so they can be maintained; see
 // app/api/liabilities and supabase/migrations/*_liabilities.sql.

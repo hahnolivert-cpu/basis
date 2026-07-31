@@ -15,6 +15,7 @@ export type Holding = {
   geo?: string;
   etf?: string;
   yld: number;
+  includedInNetWorth: boolean;
 };
 
 export type NamedValue = { name: string; value: number };

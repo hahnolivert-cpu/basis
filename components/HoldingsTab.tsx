@@ -80,7 +80,10 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
     }
 
     const out = [...Object.values(bySymbol), ...(cash ? [cash] : [])];
-    const totalValue = out.reduce((s, h) => s + h.value, 0);
+    // Excluded rows (the net-worth toggle, off) still render so they stay
+    // visible and switchable, but don't count toward this — or the Total
+    // row's — denominator.
+    const totalValue = out.filter((h) => h.includedInNetWorth !== false).reduce((s, h) => s + h.value, 0);
     return out.map((h) => ({
       ...h,
       gain: h.cls === "Cash" ? 0 : h.value - h.cost,
@@ -113,19 +116,23 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
     return arr;
   }, [merged, sort]);
 
-  const total = merged.reduce((s, h) => s + h.value, 0);
+  // Rows toggled out of net worth still render (below) so they stay visible
+  // and switchable, but are excluded from every sum here — same rule as the
+  // dashboard and every chart.
+  const counted = sorted.filter((h) => h.includedInNetWorth !== false);
+  const total = counted.reduce((s, h) => s + h.value, 0);
   const clickSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
 
   // Cash carries cost === value (no gain) and no yield of its own here, so it
   // dilutes rather than distorts these blended figures.
-  const totalCost = sorted.reduce((s, h) => s + h.cost, 0);
-  const totalDayAmt = sorted.reduce((s, h) => s + h.dayAmt, 0);
+  const totalCost = counted.reduce((s, h) => s + h.cost, 0);
+  const totalDayAmt = counted.reduce((s, h) => s + h.dayAmt, 0);
   const totalDayPct = total ? (totalDayAmt / (total - totalDayAmt)) * 100 : 0;
-  const investedCost = sorted.filter((h) => h.cls !== "Cash").reduce((s, h) => s + h.cost, 0);
-  const totalGain = sorted.reduce((s, h) => s + h.gain, 0);
+  const investedCost = counted.filter((h) => h.cls !== "Cash").reduce((s, h) => s + h.cost, 0);
+  const totalGain = counted.reduce((s, h) => s + h.gain, 0);
   const totalGainPct = investedCost ? (totalGain / investedCost) * 100 : 0;
-  const blendedYld = total ? sorted.reduce((s, h) => s + h.yld * h.value, 0) / total : 0;
+  const blendedYld = total ? counted.reduce((s, h) => s + h.yld * h.value, 0) / total : 0;
 
   return (
     <div>
@@ -179,6 +186,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
         </div>
         {sorted.map((h, i) => {
           const isCash = h.cls === "Cash";
+          const excluded = h.includedInNetWorth === false;
           return (
             <div
               key={h.sym}
@@ -186,6 +194,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
               style={{
                 display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
                 padding: "0 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13, color: T.ink,
+                opacity: excluded ? 0.55 : 1,
               }}
             >
               {/* Ticker bold + brand green over the company name in muted text
@@ -205,6 +214,14 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                           ×{h.sourceCount}
                         </span>
                       )}
+                      {excluded && (
+                        <span
+                          title="Not counted in net worth or any chart"
+                          style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.ink, border: `1px solid ${T.line}`, borderRadius: 4, padding: "1px 5px" }}
+                        >
+                          excluded
+                        </span>
+                      )}
                     </span>
                     <span style={{ fontSize: 11.5, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.name}>
                       {h.name}
@@ -214,7 +231,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
               </div>
               <div style={{ textAlign: "right", fontFamily: mono }}>{isCash ? "—" : usd(h.cost)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</div>
-              <div style={{ textAlign: "right", fontFamily: mono }}>{h.pct.toFixed(1)}%</div>
+              <div style={{ textAlign: "right", fontFamily: mono }}>{excluded ? "—" : `${h.pct.toFixed(1)}%`}</div>
               <div style={{ textAlign: "right", fontFamily: mono }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
               <div style={{ textAlign: "right" }}>{h.day === 0 ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.day} amt={h.dayAmt} size={13} weight={700} stacked />}</div>
               <div style={{ textAlign: "right" }}>{isCash ? <span style={{ fontFamily: mono }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={13} weight={700} stacked />}</div>
@@ -229,7 +246,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
               background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`,
             }}
           >
-            <div>Total ({sorted.length})</div>
+            <div>Total ({counted.length})</div>
             <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCost)}</div>
             <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(total)}</div>
             <div style={{ textAlign: "right", fontFamily: mono }}>100.0%</div>
