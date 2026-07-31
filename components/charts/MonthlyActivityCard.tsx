@@ -9,22 +9,28 @@ import type { MonthlyFlow } from "@/app/api/monthly-flows/route";
 
 const EMPTY: MonthlyFlow[] = [];
 
-// How much was bought vs sold each month, going back as far as transaction
-// history allows.
-export function MonthlyActivityCard() {
+// How much was bought vs sold each month, within whatever date range the
+// Transactions tab has selected — defaults to all history when no range is
+// passed.
+export function MonthlyActivityCard({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) {
   const { data } = useMonthlyFlows();
   const months = data?.months ?? EMPTY;
 
   const rows = useMemo(
-    () => months.map((m) => ({ label: monthLabel(`${m.month}-01`), invested: m.invested / 100, sold: m.sold / 100 })),
-    [months]
+    () =>
+      months
+        .filter((m) => (!dateFrom || m.month >= dateFrom.slice(0, 7)) && (!dateTo || m.month <= dateTo.slice(0, 7)))
+        .map((m) => ({ month: m.month, label: monthLabel(`${m.month}-01`), invested: m.invested / 100, sold: m.sold / 100 })),
+    [months, dateFrom, dateTo]
   );
+
+  const openMonth = (month: string) => window.open(`/month?months=${month}&category=activity`, "_blank");
 
   return (
     <Card style={{ flex: 1, minWidth: 320 }}>
       <Eyebrow>Invested vs sold · by month</Eyebrow>
       {rows.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>No buy or sell history yet.</div>
+        <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>No buy or sell history in this period.</div>
       ) : (
         <div style={{ height: 200 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -39,13 +45,28 @@ export function MonthlyActivityCard() {
                       <div>{payload[0].payload.label}</div>
                       <div>Invested: {usd(payload[0].payload.invested)}</div>
                       <div>Sold: {usd(payload[0].payload.sold)}</div>
+                      <div style={{ opacity: 0.7, marginTop: 2 }}>Click to view transactions</div>
                     </div>
                   ) : null
                 }
               />
               <Legend wrapperStyle={{ fontSize: 11, fontFamily: mono, color: T.ink }} />
-              <Bar dataKey="invested" name="Invested" fill={T.gain} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="sold" name="Sold" fill={T.loss} radius={[3, 3, 0, 0]} />
+              <Bar
+                dataKey="invested"
+                name="Invested"
+                fill={T.gain}
+                radius={[3, 3, 0, 0]}
+                cursor="pointer"
+                onClick={(d) => openMonth((d as unknown as { month: string }).month)}
+              />
+              <Bar
+                dataKey="sold"
+                name="Sold"
+                fill={T.loss}
+                radius={[3, 3, 0, 0]}
+                cursor="pointer"
+                onClick={(d) => openMonth((d as unknown as { month: string }).month)}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

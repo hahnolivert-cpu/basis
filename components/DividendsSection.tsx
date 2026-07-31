@@ -6,6 +6,8 @@ import { usd } from "@/lib/format";
 import { Card, Eyebrow } from "@/components/ui";
 import { useIncome } from "@/lib/hooks/useIncome";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
+import { IncomeHistoryCard } from "@/components/charts/IncomeHistoryCard";
+import { DividendCalendarCard } from "@/components/charts/DividendCalendarCard";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 
 type SortKey = "date" | "source" | "type" | "portfolio" | "gross" | "withholding" | "net";
@@ -129,11 +131,17 @@ export function DividendsSection() {
   const clickSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
 
-  // Summary cards read straight off the raw ledger (pre-merge) so they stay
-  // correct regardless of how rows get paired for display.
-  const dividendsCents = raw.filter((t) => t.type === "dividend").reduce((s, t) => s + t.amountCents, 0);
-  const interestCents = raw.filter((t) => t.type === "interest").reduce((s, t) => s + t.amountCents, 0);
-  const withholdingCents = raw.filter((t) => t.type === "withholding_tax").reduce((s, t) => s + t.amountCents, 0);
+  // Summary cards track the selected date range (like the table and charts
+  // below) but not the type/search filters — "Dividends" and "Interest"
+  // need to stay visible side by side even when the table itself is
+  // filtered down to just one of them.
+  const dateFiltered = useMemo(
+    () => raw.filter((t) => (!dateFrom || t.date >= dateFrom) && (!dateTo || t.date <= dateTo)),
+    [raw, dateFrom, dateTo]
+  );
+  const dividendsCents = dateFiltered.filter((t) => t.type === "dividend").reduce((s, t) => s + t.amountCents, 0);
+  const interestCents = dateFiltered.filter((t) => t.type === "interest").reduce((s, t) => s + t.amountCents, 0);
+  const withholdingCents = dateFiltered.filter((t) => t.type === "withholding_tax").reduce((s, t) => s + t.amountCents, 0);
   const netCents = dividendsCents + interestCents + withholdingCents;
 
   const totalGross = sorted.reduce((s, r) => s + r.grossCents, 0);
@@ -261,6 +269,11 @@ export function DividendsSection() {
             )}
           </div>
         </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 20 }}>
+        <IncomeHistoryCard dateFrom={dateFrom} dateTo={dateTo} />
+        <DividendCalendarCard dateFrom={dateFrom} dateTo={dateTo} />
       </div>
     </div>
   );

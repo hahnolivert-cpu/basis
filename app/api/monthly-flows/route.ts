@@ -1,8 +1,8 @@
 import { jsonNoStore, safeMessage } from "@/lib/http";
 import { createServiceClient } from "@/lib/supabase/service";
 
-// Monthly invested (buy) vs sold (sell) totals for the main dashboard's
-// activity chart. Aggregated server-side from every buy/sell row — unlike
+// Monthly invested (buy) vs sold (sell) totals for the dashboard's activity
+// chart. Aggregated server-side from every buy/sell row — unlike
 // /api/transactions, this doesn't require qty/price_cents to be set, since
 // only the dollar total per month matters here.
 export const dynamic = "force-dynamic";
@@ -10,20 +10,40 @@ export const dynamic = "force-dynamic";
 export type MonthlyFlow = { month: string; invested: number; sold: number };
 export type MonthlyFlowsPayload = { months: MonthlyFlow[]; error?: string };
 
-export async function GET() {
+export type FlowTransaction = { id: string; date: string; type: "buy" | "sell"; symbol: string | null; amountCents: number };
+export type MonthlyFlowDetailPayload = { transactions: FlowTransaction[]; error?: string };
+
+type FlowRow = { id: string; date: string; type: "buy" | "sell"; symbol: string | null; amount_cents: number };
+
+export async function GET(req: Request) {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonNoStore({ months: [], error: "SUPABASE_SERVICE_ROLE_KEY not set" });
+    return jsonNoStore({ months: [], transactions: [], error: "SUPABASE_SERVICE_ROLE_KEY not set" });
   }
+
+  // Clicking a bar in the chart opens a detail view for that month (or, for
+  // the seasonal dividend calendar, every year that month occurred in the
+  // selected range) — same data source, filtered to those months instead of
+  // aggregated.
+  const monthsParam = new URL(req.url).searchParams.get("months");
 
   try {
     const supabase = createServiceClient();
     const { data, error } = await supabase
       .from("transactions")
-      .select("date, type, amount_cents")
+      .select("id, date, type, symbol, amount_cents")
       .in("type", ["buy", "sell"])
       .order("date", { ascending: true })
-      .returns<{ date: string; type: "buy" | "sell"; amount_cents: number }[]>();
+      .returns<FlowRow[]>();
     if (error) throw new Error(error.message);
+
+    if (monthsParam) {
+      const wanted = new Set(monthsParam.split(",").filter(Boolean));
+      const transactions: FlowTransaction[] = (data ?? [])
+        .filter((t) => wanted.has(t.date.slice(0, 7)))
+        .map((t) => ({ id: t.id, date: t.date, type: t.type, symbol: t.symbol, amountCents: t.amount_cents }))
+        .sort((a, b) => b.date.localeCompare(a.date));
+      return jsonNoStore({ transactions });
+    }
 
     const byMonth = new Map<string, MonthlyFlow>();
     for (const t of data ?? []) {
@@ -36,6 +56,6 @@ export async function GET() {
 
     return jsonNoStore({ months: Array.from(byMonth.values()).sort((a, b) => a.month.localeCompare(b.month)) });
   } catch (e) {
-    return jsonNoStore({ months: [], error: safeMessage(e) }, { status: 500 });
+    return jsonNoStore({ months: [], transactions: [], error: safeMessage(e) }, { status: 500 });
   }
 }
