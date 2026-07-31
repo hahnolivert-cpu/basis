@@ -63,17 +63,17 @@ export async function GET() {
   } catch {
     equities = BASE_HOLDINGS;
   }
-  const symbols = Array.from(
-    new Set(
-      equities
-        .filter((h) => h.cls === "Equities")
-        .map((h) => {
-          const ref = quoteRefFor(h.sym, h.cls);
-          return ref?.type === "equity" ? ref.symbol : null;
-        })
-        .filter((s): s is string => s !== null)
-    )
-  );
+  // Cache and output are keyed on the original holdings symbol (e.g. "BRK B"),
+  // not the Polygon dialect ("BRK.B") — otherwise a share-class ticker with a
+  // space caches under a key nothing else in the app recognises. See the same
+  // fix in app/api/earnings/route.ts.
+  const polygonByDbSymbol = new Map<string, string>();
+  for (const h of equities) {
+    if (h.cls !== "Equities") continue;
+    const ref = quoteRefFor(h.sym, h.cls);
+    if (ref?.type === "equity") polygonByDbSymbol.set(h.sym, ref.symbol);
+  }
+  const symbols = Array.from(polygonByDbSymbol.keys());
   const yields: Record<string, number> = {};
   const errors: string[] = [];
 
@@ -103,7 +103,8 @@ export async function GET() {
   // time (sequentially, not Promise.all) rather than bursting all of them —
   // the rest just fall back to the static value and pick up on a later poll.
   const POLYGON_BATCH_SIZE = 2;
-  for (const sym of stale.slice(0, POLYGON_BATCH_SIZE)) {
+  for (const dbSym of stale.slice(0, POLYGON_BATCH_SIZE)) {
+    const sym = polygonByDbSymbol.get(dbSym)!;
     try {
       const records = await fetchPolygonDividends(sym, apiKey);
       if (supabase && records.length) {
@@ -112,15 +113,15 @@ export async function GET() {
           .upsert(
             records
               .filter((r) => r.ex_dividend_date)
-              .map((r) => ({ symbol: sym, ex_dividend_date: r.ex_dividend_date, cash_amount: r.cash_amount, frequency: r.frequency, updated_at: today })),
+              .map((r) => ({ symbol: dbSym, ex_dividend_date: r.ex_dividend_date, cash_amount: r.cash_amount, frequency: r.frequency, updated_at: today })),
             { onConflict: "symbol,ex_dividend_date" }
           );
       }
 
       const perShare = records.reduce((s, r) => s + r.cash_amount, 0);
       if (perShare <= 0) {
-        yields[sym] = 0;
-        if (supabase) await supabase.from("dividend_cache").upsert({ symbol: sym, yield_pct: 0, updated_at: today });
+        yields[dbSym] = 0;
+        if (supabase) await supabase.from("dividend_cache").upsert({ symbol: dbSym, yield_pct: 0, updated_at: today });
         continue;
       }
       const price = await fetchPrevClose(sym, apiKey);
@@ -129,8 +130,8 @@ export async function GET() {
         continue;
       }
       const y = +((perShare / price) * 100).toFixed(2);
-      yields[sym] = y;
-      if (supabase) await supabase.from("dividend_cache").upsert({ symbol: sym, yield_pct: y, updated_at: today });
+      yields[dbSym] = y;
+      if (supabase) await supabase.from("dividend_cache").upsert({ symbol: dbSym, yield_pct: y, updated_at: today });
     } catch (e) {
       errors.push(`Polygon: ${sym} request failed — ${safeMessage(e)}`);
     }

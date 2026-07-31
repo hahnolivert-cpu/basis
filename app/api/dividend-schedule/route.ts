@@ -27,15 +27,14 @@ export async function GET() {
     } catch {
       equities = BASE_HOLDINGS;
     }
+    // dividend_schedule_cache is keyed on the original holdings symbol (e.g.
+    // "BRK B"), not the Polygon dialect ("BRK.B") — see app/api/dividends/route.ts.
     const symbols = Array.from(
       new Set(
         equities
           .filter((h) => h.cls === "Equities")
-          .map((h) => {
-            const ref = quoteRefFor(h.sym, h.cls);
-            return ref?.type === "equity" ? ref.symbol : null;
-          })
-          .filter((s): s is string => s !== null)
+          .filter((h) => quoteRefFor(h.sym, h.cls)?.type === "equity")
+          .map((h) => h.sym)
       )
     );
     if (symbols.length === 0) return jsonNoStore({ schedule: [] });
