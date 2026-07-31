@@ -1,13 +1,14 @@
 import { jsonNoStore, safeMessage } from "@/lib/http";
 import { BASE_HOLDINGS } from "@/lib/data";
-import { getDbHoldings, quoteRefFor } from "@/lib/holdings";
+import { getDbHoldings, quoteRefFor, looksLikeFund } from "@/lib/holdings";
 import { createServiceClient } from "@/lib/supabase/service";
 
 // Next earnings date + analyst estimates, and actual-vs-estimate results for
-// the last several quarters, for whichever equities are actually held.
-// Finnhub's free tier has no earnings-call transcript access — this is the
-// reported numbers (EPS/revenue actual vs estimate, surprise %), not a
-// transcript of what was said on the call.
+// the last several quarters, for individual companies held (funds/ETFs
+// excluded — they don't have an earnings call to report on). Finnhub's free
+// tier has no earnings-call transcript access, so this is the reported
+// numbers (EPS/revenue actual vs estimate, surprise %), not a summary of
+// what was said on the call.
 export const dynamic = "force-dynamic";
 
 type EarningsCacheRow = {
@@ -26,6 +27,8 @@ export type EarningsQuarter = {
   epsActual: number | null;
   epsEstimate: number | null;
   surprisePercent: number | null;
+  revenueActual: number | null;
+  revenueYoy: number | null;
 };
 
 export type SymbolEarnings = {
@@ -53,7 +56,7 @@ async function fetchEarningsCalendar(symbol: string, apiKey: string): Promise<{ 
   return { date: next.date, epsEstimate: next.epsEstimate ?? null, revenueEstimate: next.revenueEstimate ?? null };
 }
 
-async function fetchEarningsHistory(symbol: string, apiKey: string): Promise<EarningsQuarter[]> {
+async function fetchEarningsHistory(symbol: string, apiKey: string): Promise<Omit<EarningsQuarter, "revenueActual" | "revenueYoy">[]> {
   const res = await fetch(`https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&token=${apiKey}`, { cache: "no-store" });
   const json = await res.json();
   if (!res.ok) throw new Error(`Finnhub earnings-surprise request failed (${res.status})`);
@@ -67,31 +70,85 @@ async function fetchEarningsHistory(symbol: string, apiKey: string): Promise<Ear
   }));
 }
 
+type PolygonQuarter = { period: string; revenue: number | null };
+
+// Real reported revenue per fiscal quarter, keyed by the quarter's end date
+// (matches Finnhub's `period` field, e.g. "2026-06-30") so it can be merged
+// into the same history rows. Polygon's financials are standardized from SEC
+// filings, which is why revenue is reliably present here — unlike free-cash-
+// flow, capital expenditure isn't consistently tagged across companies'
+// filings, so it can't be derived the same way.
+//
+// Fetched with limit=8 (2 years) rather than 4 specifically so revenue YoY
+// growth (quarter vs. the same quarter a year earlier) can be computed below —
+// Finnhub's free-tier `/stock/earnings` only ever returns the most recent 4
+// quarters (confirmed against multiple long-public tickers), so EPS has no
+// same-source prior-year point to compare against and doesn't get a YoY figure.
+async function fetchPolygonQuarters(symbol: string, apiKey: string): Promise<PolygonQuarter[]> {
+  const res = await fetch(
+    `https://api.polygon.io/vX/reference/financials?ticker=${symbol}&timeframe=quarterly&limit=8&apiKey=${apiKey}`,
+    { cache: "no-store" }
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(`Polygon financials request failed (${res.status})`);
+  return (json.results ?? [])
+    .filter((r: { end_date?: string }) => r.end_date)
+    .map((r: { end_date: string; financials?: { income_statement?: { revenues?: { value?: number } } } }) => ({
+      period: r.end_date,
+      revenue: typeof r.financials?.income_statement?.revenues?.value === "number" ? r.financials.income_statement.revenues.value : null,
+    }))
+    .sort((a: PolygonQuarter, b: PolygonQuarter) => b.period.localeCompare(a.period));
+}
+
+// The same fiscal quarter a year earlier — matched by date proximity (~1 year
+// back, ±20 days) rather than "4 array positions back". A positional offset
+// breaks for thinly-covered tickers: e.g. STRC (a perpetual preferred that only
+// started trading in 2025) returns Strategy Inc.'s real current-quarter revenue
+// from Polygon, but with gaps in older quarters, so "index+4" can land on an
+// unrelated or missing period and produce a nonsense growth percentage.
+function findPriorYearQuarter(quarters: PolygonQuarter[], currentPeriod: string): PolygonQuarter | undefined {
+  const targetTime = new Date(`${currentPeriod}T00:00:00Z`).getTime() - 365 * 86400000;
+  let best: PolygonQuarter | undefined;
+  let bestDiffDays = Infinity;
+  for (const q of quarters) {
+    if (q.period === currentPeriod) continue;
+    const diffDays = Math.abs(new Date(`${q.period}T00:00:00Z`).getTime() - targetTime) / 86400000;
+    if (diffDays < bestDiffDays) {
+      bestDiffDays = diffDays;
+      best = q;
+    }
+  }
+  return bestDiffDays <= 20 ? best : undefined;
+}
+
 export async function GET() {
-  const apiKey = process.env.FINNHUB_API_KEY;
+  const finnhubKey = process.env.FINNHUB_API_KEY;
+  const polygonKey = process.env.POLYGON_API_KEY;
   const today = new Date().toISOString().slice(0, 10);
 
-  let equities: { sym: string; cls: string }[];
+  let holdings: { sym: string; cls: string; name: string }[];
   try {
     const db = await getDbHoldings();
-    equities = db.length ? db : BASE_HOLDINGS;
+    holdings = db.length ? db : BASE_HOLDINGS;
   } catch {
-    equities = BASE_HOLDINGS;
+    holdings = BASE_HOLDINGS;
   }
   // Cache and output are keyed on the original holdings symbol (e.g. "BRK B"),
   // not the Finnhub dialect ("BRK.B") — otherwise a share-class ticker with a
   // space caches under a key nothing else in the app recognises, and the
   // component's holdings-name lookup (keyed on the DB symbol) silently misses.
+  // Funds/ETFs are excluded entirely — they don't report earnings.
   const finnhubByDbSymbol = new Map<string, string>();
-  for (const h of equities) {
+  for (const h of holdings) {
     if (h.cls !== "Equities") continue;
+    if (looksLikeFund(h.sym, h.name)) continue;
     const ref = quoteRefFor(h.sym, h.cls);
     if (ref?.type === "equity") finnhubByDbSymbol.set(h.sym, ref.symbol);
   }
   const dbSymbols = Array.from(finnhubByDbSymbol.keys());
 
   const errors: string[] = [];
-  if (!apiKey) {
+  if (!finnhubKey) {
     return jsonNoStore({ asOf: today, earnings: [], errors: ["FINNHUB_API_KEY not set"] });
   }
 
@@ -120,13 +177,27 @@ export async function GET() {
     stale = dbSymbols.filter((s) => !bySymbol.has(s));
   }
 
-  // Two Finnhub calls per symbol, so only backfill a couple of stale symbols
-  // per request — same throttling reasoning as /api/dividends.
+  // Two Finnhub calls plus one Polygon call per symbol, so only backfill a
+  // couple of stale symbols per request — same throttling reasoning as
+  // /api/dividends.
   const BATCH_SIZE = 2;
   for (const dbSym of stale.slice(0, BATCH_SIZE)) {
     const finnhubSym = finnhubByDbSymbol.get(dbSym)!;
     try {
-      const [next, history] = await Promise.all([fetchEarningsCalendar(finnhubSym, apiKey), fetchEarningsHistory(finnhubSym, apiKey)]);
+      const [next, rawHistory, polygonQuarters] = await Promise.all([
+        fetchEarningsCalendar(finnhubSym, finnhubKey),
+        fetchEarningsHistory(finnhubSym, finnhubKey),
+        polygonKey ? fetchPolygonQuarters(finnhubSym, polygonKey).catch(() => [] as PolygonQuarter[]) : Promise.resolve([] as PolygonQuarter[]),
+      ]);
+      const history: EarningsQuarter[] = rawHistory.map((q) => {
+        const current = polygonQuarters.find((pq) => pq.period === q.period);
+        const priorYear = findPriorYearQuarter(polygonQuarters, q.period);
+        const revenueYoy =
+          current?.revenue != null && priorYear?.revenue != null && priorYear.revenue !== 0
+            ? ((current.revenue - priorYear.revenue) / Math.abs(priorYear.revenue)) * 100
+            : null;
+        return { ...q, revenueActual: current?.revenue ?? null, revenueYoy };
+      });
       const entry: SymbolEarnings = {
         symbol: dbSym,
         nextDate: next?.date ?? null,

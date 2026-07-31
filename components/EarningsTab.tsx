@@ -26,6 +26,7 @@ function daysUntil(dateStr: string): number {
   return Math.round((target - today) / 86400000);
 }
 
+
 const EMPTY: SymbolEarnings[] = [];
 
 export function EarningsTab({ holdings }: { holdings: Holding[] }) {
@@ -49,20 +50,43 @@ export function EarningsTab({ holdings }: { holdings: Holding[] }) {
     [earnings]
   );
 
+  const upcoming = sorted.filter((e) => e.nextDate);
+
   return (
     <div>
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 22, marginBottom: 4 }}>Earnings</div>
       <div style={{ fontSize: 12.5, color: T.ink, marginBottom: 18 }}>
         Next report date and analyst estimates, and how each company did the last several quarters (reported actuals
-        vs. estimate). Real numbers from Finnhub — not a transcript of the call itself, which needs a paid plan we
-        don&apos;t have.
+        vs. estimate). Real numbers from Finnhub and Polygon — not a transcript of the call itself, which needs a
+        paid plan we don&apos;t have. Funds and ETFs are excluded — they don&apos;t report earnings.
       </div>
 
       {isLoading && <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>Loading earnings data…</div>}
       {!isLoading && sorted.length === 0 && (
         <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>
-          {data?.errors?.length ? `Could not load earnings data: ${data.errors.join(", ")}` : "No equity holdings to show earnings for."}
+          {data?.errors?.length ? `Could not load earnings data: ${data.errors.join(", ")}` : "No single-company holdings to show earnings for."}
         </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <Card style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: T.ink, marginBottom: 8 }}>Next report date, by company</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8 }}>
+            {upcoming.map((e) => {
+              const name = nameBySymbol.get(e.symbol) ?? e.symbol;
+              const days = e.nextDate ? daysUntil(e.nextDate) : null;
+              return (
+                <div key={e.symbol} style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px" }}>
+                  <div style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 13 }} title={name}>
+                    {e.symbol}
+                  </div>
+                  <div style={{ fontFamily: mono, fontSize: 12, color: T.ink, marginTop: 2 }}>{e.nextDate}</div>
+                  {days !== null && <div style={{ fontSize: 11, color: T.ink }}>{days >= 0 ? `in ${days}d` : "reported"}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -94,9 +118,9 @@ export function EarningsTab({ holdings }: { holdings: Holding[] }) {
 
               {e.history.length > 0 && (
                 <div style={{ overflowX: "auto" }}>
-                  <div style={{ minWidth: 480 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "0 4px", borderBottom: `1px solid ${T.line}` }}>
-                      {["Quarter", "EPS actual", "EPS estimate", "Surprise"].map((label, i) => (
+                  <div style={{ minWidth: 640 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 0.9fr 1fr 1fr 1fr", padding: "0 4px", borderBottom: `1px solid ${T.line}` }}>
+                      {["Quarter", "Revenue", "Rev YoY", "EPS actual", "EPS estimate", "Surprise"].map((label, i) => (
                         <div
                           key={label}
                           style={{
@@ -111,10 +135,14 @@ export function EarningsTab({ holdings }: { holdings: Holding[] }) {
                     {e.history.map((q) => (
                       <div
                         key={q.period}
-                        style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "0 4px", borderBottom: `1px solid ${T.line}`, fontSize: 12.5 }}
+                        style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 0.9fr 1fr 1fr 1fr", padding: "0 4px", borderBottom: `1px solid ${T.line}`, fontSize: 12.5 }}
                       >
                         <div style={{ padding: "6px 0", fontFamily: mono, color: T.ink }}>
                           Q{q.quarter} {q.year} <span style={{ color: T.ink, fontSize: 10.5 }}>({q.period})</span>
+                        </div>
+                        <div style={{ padding: "6px 0", textAlign: "right", fontFamily: mono, color: T.ink }}>{usdCompact(q.revenueActual)}</div>
+                        <div style={{ padding: "6px 0", textAlign: "right", fontFamily: mono, color: q.revenueYoy === null ? T.ink : q.revenueYoy >= 0 ? T.gain : T.loss }}>
+                          {q.revenueYoy !== null ? `${q.revenueYoy >= 0 ? "+" : ""}${q.revenueYoy.toFixed(1)}%` : "—"}
                         </div>
                         <div style={{ padding: "6px 0", textAlign: "right", fontFamily: mono }}>{q.epsActual?.toFixed(2) ?? "—"}</div>
                         <div style={{ padding: "6px 0", textAlign: "right", fontFamily: mono, color: T.ink }}>{q.epsEstimate?.toFixed(2) ?? "—"}</div>
