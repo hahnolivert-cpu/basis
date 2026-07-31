@@ -17,6 +17,7 @@ import { useQuotes } from "@/lib/hooks/useQuotes";
 import { useDividends } from "@/lib/hooks/useDividends";
 import { useHoldings } from "@/lib/hooks/useHoldings";
 import { useLiabilities } from "@/lib/hooks/useLiabilities";
+import { usePersistedState } from "@/lib/hooks/usePersistedState";
 
 const TABS: [string, string][] = [
   ["networth", "Dashboard"],
@@ -27,7 +28,7 @@ const TABS: [string, string][] = [
 
 export default function Home() {
   const router = useRouter();
-  const [tab, setTab] = useState("networth");
+  const [tab, setTab] = usePersistedState("app.tab", "networth");
   const [lookThrough, setLookThrough] = useState(true);
   const { data: quotes } = useQuotes();
   const { data: dividends } = useDividends();

@@ -8,6 +8,7 @@ import { ManualPositions } from "@/components/ManualPositions";
 import { TransactionsSection } from "@/components/TransactionsSection";
 import { DividendsSection } from "@/components/DividendsSection";
 import { formatTicker } from "@/lib/holdings";
+import { usePersistedState } from "@/lib/hooks/usePersistedState";
 import type { Holding, Portfolio } from "@/lib/types";
 
 type SortKey = "sym" | "cost" | "value" | "pct" | "yld" | "day" | "gain";
@@ -42,7 +43,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
     ["transactions", "Transactions"],
     ["dividends", "Dividends"],
   ];
-  const [pf, setPf] = useState<"all" | Portfolio | "transactions" | "dividends">("all");
+  const [pf, setPf] = usePersistedState<"all" | Portfolio | "transactions" | "dividends">("holdings.pf", "all");
   const [sort, setSort] = useState<Sort>({ key: "value", dir: "desc" });
 
   // Cash consolidates into a single row regardless of symbol (Brex Treasury,
