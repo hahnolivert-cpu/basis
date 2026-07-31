@@ -19,7 +19,7 @@ export type BrexAccount = {
 export type BrexTxn = {
   externalId: string;
   date: string; // YYYY-MM-DD
-  type: "dividend" | "interest" | "transfer";
+  type: "interest" | "transfer";
   amountCents: number;
   description: string;
   rawType: string;
@@ -68,12 +68,13 @@ export async function fetchBrexCardBalanceCents(token: string): Promise<number> 
   return accounts.filter((a) => a.status === "ACTIVE").reduce((s, a) => s + Math.round(a.current_balance?.amount ?? 0), 0);
 }
 
-// Brex reports Treasury yield as type DIVIDEND (it is a money-market fund), not
-// INTEREST — classifying only on /INTEREST/ silently filed every yield payment
-// as a transfer and dropped it out of the income card.
+// Brex reports Treasury yield as type DIVIDEND (it is technically a
+// money-market fund), but economically it's the cash sweep yield — the same
+// thing IBKR and Robinhood report as interest — so it's classified as
+// interest here rather than a dividend, to stay consistent with the rest of
+// the income ledger.
 function classify(rawType: string): BrexTxn["type"] {
-  if (/DIVIDEND/i.test(rawType)) return "dividend";
-  if (/INTEREST/i.test(rawType)) return "interest";
+  if (/DIVIDEND|INTEREST/i.test(rawType)) return "interest";
   return "transfer";
 }
 
