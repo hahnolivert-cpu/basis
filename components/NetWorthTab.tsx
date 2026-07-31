@@ -18,6 +18,9 @@ import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
 import { IncomeHistoryCard } from "@/components/charts/IncomeHistoryCard";
 import { DividendCalendarCard } from "@/components/charts/DividendCalendarCard";
 import { MonthlyActivityCard } from "@/components/charts/MonthlyActivityCard";
+import { useIncome } from "@/lib/hooks/useIncome";
+import { useDividendSchedule } from "@/lib/hooks/useDividendSchedule";
+import { projectExpectedDividends } from "@/lib/expectedDividends";
 import type { Holding } from "@/lib/types";
 import type { Liability } from "@/app/api/liabilities/route";
 
@@ -39,7 +42,29 @@ export function NetWorthTab({
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const capital = holdings.filter((h) => h.pf === "capital").reduce((s, h) => s + h.value, 0);
   const personal = total - capital;
-  const income = holdings.reduce((s, h) => s + (h.value * h.yld) / 100, 0);
+
+  // Real per-symbol annual dividend income where Polygon's published record
+  // (or, failing that, our own payment-cadence inference) covers it — the
+  // same data the dividend calendar projects from — instead of the flatter
+  // value x trailing-yield estimate, which the calendar rebuild showed
+  // understates or overstates irregular payers like BIDD. Cash-sweep
+  // "yield" (Treasury, IBKR cash interest) isn't a dividend at all, so it
+  // has no entry here and correctly falls back to the yield-based estimate.
+  const { data: incomeData } = useIncome();
+  const { data: scheduleData } = useDividendSchedule();
+  const annualDividendBySymbol = useMemo(() => {
+    const projection = projectExpectedDividends(holdings, incomeData?.transactions ?? [], scheduleData?.schedule ?? []);
+    const map = new Map<string, number>();
+    for (const month of projection) {
+      for (const c of month.bySymbol) map.set(c.symbol, (map.get(c.symbol) ?? 0) + c.amountCents);
+    }
+    return map;
+  }, [holdings, incomeData, scheduleData]);
+  const estAnnualIncome = (h: Holding) => {
+    const real = annualDividendBySymbol.get(h.sym);
+    return real !== undefined ? real / 100 : (h.value * h.yld) / 100;
+  };
+  const income = mergeBySym(holdings).reduce((s, h) => s + estAnnualIncome(h), 0);
 
   // Each composition chart gets its own Crypto/Cash include toggles rather
   // than one global control — Asset Class and Geography default to showing
@@ -73,8 +98,8 @@ export function NetWorthTab({
   // Merged by symbol first — otherwise a position split across two accounts
   // (e.g. STRC at both IBKR and Robinhood) shows up as two separate rows.
   const incomeRows = mergeBySym(holdings)
-    .filter((h) => h.yld > 0)
-    .map((h) => ({ ...h, inc: (h.value * h.yld) / 100 }))
+    .map((h) => ({ ...h, inc: estAnnualIncome(h) }))
+    .filter((h) => h.inc > 0)
     .sort((a, b) => b.inc - a.inc);
   const startNW = total - debts;
   const [drilldown, setDrilldown] = useState<Drilldown | null>(null);
@@ -141,6 +166,12 @@ export function NetWorthTab({
               <span style={{ fontFamily: mono }}>{usd(h.inc)}</span>
             </div>
           ))}
+          {incomeRows.length > 10 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 0", color: T.ink }}>
+              <span>+ {incomeRows.length - 10} more</span>
+              <span style={{ fontFamily: mono }}>{usd(incomeRows.slice(10).reduce((s, h) => s + h.inc, 0))}</span>
+            </div>
+          )}
         </Card>
       </div>
 
