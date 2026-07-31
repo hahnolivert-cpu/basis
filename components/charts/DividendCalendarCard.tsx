@@ -11,11 +11,12 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 const EMPTY: IncomeTransaction[] = [];
 
 // Forward projection, not history: each held symbol's annual expected income
-// (current value × trailing yield) is split across the calendar months it
-// has actually paid a dividend in before. There's no forward-looking
-// ex-dividend/pay-date feed wired up, so timing is inferred from the past —
-// but the dollar amounts reflect today's position sizes, not whatever was
-// held when a past payment landed.
+// (current value × trailing yield) is timed using its own payment cadence —
+// monthly payers get every month, less-frequent or irregular payers get
+// history's actual month-to-month split rather than a flat average. There's
+// no forward-looking ex-dividend/pay-date feed wired up, so timing is
+// inferred from the past — but the dollar amounts reflect today's position
+// sizes, not whatever was held when a past payment landed.
 export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
   const { data } = useIncome();
   const rows = data?.transactions ?? EMPTY;
@@ -29,7 +30,7 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
     <Card style={{ flex: 1, minWidth: 320 }}>
       <Eyebrow style={{ marginBottom: 4 }}>Dividend calendar · expected per month</Eyebrow>
       <div style={{ fontSize: 11.5, color: T.ink, marginBottom: 12 }}>
-        Projected from current holdings&apos; yield, spread across each symbol&apos;s historical payment months.
+        Projected from current holdings&apos; yield, timed to each symbol&apos;s own payment cadence.
       </div>
       {!hasAny ? (
         <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>Not enough dividend history to project a schedule yet.</div>
