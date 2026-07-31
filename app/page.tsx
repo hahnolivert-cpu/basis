@@ -11,6 +11,7 @@ import { NetWorthTab } from "@/components/NetWorthTab";
 import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
 import { TrackingTab } from "@/components/TrackingTab";
+import { EarningsTab } from "@/components/EarningsTab";
 import { SyncButton } from "@/components/SyncButton";
 import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
@@ -22,6 +23,7 @@ const TABS: [string, string][] = [
   ["networth", "Dashboard"],
   ["holdings", "Holdings"],
   ["tracking", "Tracking"],
+  ["earnings", "Earnings"],
   ["scenarios", "Scenario Planning"],
 ];
 
@@ -140,6 +142,7 @@ export default function Home() {
         )}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
         {tab === "tracking" && <TrackingTab />}
+        {tab === "earnings" && <EarningsTab holdings={holdings} />}
         {tab === "scenarios" && <ScenarioTab startNW={startNW} holdings={holdings} />}
 
         <div style={{ marginTop: 30, fontSize: 12, color: T.inkSoft, lineHeight: 1.6, borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
