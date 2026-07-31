@@ -66,6 +66,23 @@ function mapPlaidInvTxnType(type: string, subtype: string): TxnWrite["type"] | n
   return null; // e.g. "cancel"
 }
 
+// Last-resort fallback for a buy/sell whose security_id couldn't be resolved
+// through either securities list (see the `sec` lookup below). Plaid's own
+// human-readable name for crypto, options, and dividend-reinvestment rows
+// puts the ticker directly in the text ("buy 36.365800 HYPE for $41.25
+// each", "GLNK call with strike...", "5.588 shares of NVO for..."), so it
+// can be recovered from there. Ordinary equity/ETF buys instead spell out
+// the full company name ("shares of Microsoft for...") with no ticker
+// anywhere in the string, so those are left null rather than guessed at.
+function extractTickerFromPlaidName(name: string): string | null {
+  return (
+    name.match(/[\d.]+ ([A-Z][A-Z0-9]{0,9}) (?:call|put)\b/)?.[1] ??
+    name.match(/shares of ([A-Z][A-Z0-9.]{0,9}) for/)?.[1] ??
+    name.match(/[\d.]+ ([A-Z][A-Z0-9]{0,9}) for \$/)?.[1] ??
+    null
+  );
+}
+
 type ItemRow = { institution: string; access_token: string };
 
 export type PlaidInstitutionPlan = {
@@ -231,12 +248,18 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
           const type = mapPlaidInvTxnType(t.type, t.subtype);
           const externalId = `plaid:${item.institution}:${t.investment_transaction_id}`;
           if (!type) return null;
-          const sec = t.security_id ? txnSecById.get(t.security_id) : undefined;
+          // The transactions call's own `securities` bundle occasionally fails to
+          // resolve a security_id — most often for something bought too recently
+          // for Plaid to have indexed yet — even though the holdings call above
+          // resolves the same security_id fine, so fall back to that map before
+          // giving up and trying the description text.
+          const sec = t.security_id ? txnSecById.get(t.security_id) ?? secById.get(t.security_id) : undefined;
+          const descriptionTicker = type === "buy" || type === "sell" ? extractTickerFromPlaidName(t.name) : null;
           return {
             external_id: externalId,
             date: t.date,
             type,
-            symbol: (sec?.ticker_symbol || sec?.name || null)?.trim() || null,
+            symbol: (sec?.ticker_symbol || sec?.name || descriptionTicker || null)?.trim() || null,
             // Plaid signs a buy positive (cash debited) and a sell negative
             // (cash credited) — the opposite of the netCash convention
             // already stored for IBKR (buy negative, sell positive).

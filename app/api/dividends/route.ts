@@ -54,8 +54,7 @@ async function fetchPrevClose(symbol: string, apiKey: string): Promise<number | 
 export async function GET() {
   const apiKey = process.env.POLYGON_API_KEY;
   const today = new Date().toISOString().slice(0, 10);
-  // Yields for whatever equities are actually held, normalised to the ticker
-  // Polygon expects (IBKR writes share classes with a space, e.g. "BRK B").
+  // Yields for whatever equities are actually held.
   let equities: { sym: string; cls: string }[];
   try {
     const db = await getDbHoldings();
