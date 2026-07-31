@@ -9,9 +9,14 @@ export const dynamic = "force-dynamic";
 type DividendCacheRow = { symbol: string; yield_pct: number; updated_at: string };
 export type DividendsPayload = { asOf: string; yields: Record<string, number>; errors?: string[] };
 
-// Trailing-12-month dividends per share (from Polygon's dividends
-// reference) divided by the previous close, as a % yield estimate.
-async function fetchPolygonYield(symbol: string, apiKey: string): Promise<number | null> {
+type PolygonDividendRecord = { cash_amount: number; ex_dividend_date: string; frequency: number };
+
+// Trailing 12 months of individual payment records — not just their sum.
+// The expected-dividend calendar needs the real ex-dividend date and
+// per-share amount of each payment (STRC's floating monthly rate, BIDD's
+// wildly uneven quarterly amounts) to time and size months correctly; our
+// own sync history is too short and too sparse for that on its own.
+async function fetchPolygonDividends(symbol: string, apiKey: string): Promise<PolygonDividendRecord[]> {
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const cutoff = oneYearAgo.toISOString().slice(0, 10);
@@ -28,12 +33,14 @@ async function fetchPolygonYield(symbol: string, apiKey: string): Promise<number
   if (!divRes.ok || divJson.status !== "OK") {
     throw new Error(divJson.error || `Polygon dividends request failed (${divRes.status})`);
   }
-  const perShare: number = (divJson.results ?? []).reduce(
-    (s: number, d: { cash_amount?: number }) => s + (d.cash_amount ?? 0),
-    0
-  );
-  if (perShare <= 0) return 0;
+  return (divJson.results ?? []).map((d: { cash_amount?: number; ex_dividend_date?: string; frequency?: number }) => ({
+    cash_amount: d.cash_amount ?? 0,
+    ex_dividend_date: d.ex_dividend_date ?? "",
+    frequency: d.frequency ?? 0,
+  }));
+}
 
+async function fetchPrevClose(symbol: string, apiKey: string): Promise<number | null> {
   const priceRes = await fetch(`https://api.polygon.io/v2/aggs/ticker/${symbol}/prev?adjusted=true&apiKey=${apiKey}`, {
     cache: "no-store",
   });
@@ -41,10 +48,7 @@ async function fetchPolygonYield(symbol: string, apiKey: string): Promise<number
   if (!priceRes.ok || priceJson.status !== "OK") {
     throw new Error(priceJson.error || `Polygon prev-close request failed (${priceRes.status})`);
   }
-  const price = priceJson.results?.[0]?.c;
-  if (!price) return null;
-
-  return +((perShare / price) * 100).toFixed(2);
+  return priceJson.results?.[0]?.c ?? null;
 }
 
 export async function GET() {
@@ -101,11 +105,30 @@ export async function GET() {
   const POLYGON_BATCH_SIZE = 2;
   for (const sym of stale.slice(0, POLYGON_BATCH_SIZE)) {
     try {
-      const y = await fetchPolygonYield(sym, apiKey);
-      if (y === null) {
+      const records = await fetchPolygonDividends(sym, apiKey);
+      if (supabase && records.length) {
+        await supabase
+          .from("dividend_schedule_cache")
+          .upsert(
+            records
+              .filter((r) => r.ex_dividend_date)
+              .map((r) => ({ symbol: sym, ex_dividend_date: r.ex_dividend_date, cash_amount: r.cash_amount, frequency: r.frequency, updated_at: today })),
+            { onConflict: "symbol,ex_dividend_date" }
+          );
+      }
+
+      const perShare = records.reduce((s, r) => s + r.cash_amount, 0);
+      if (perShare <= 0) {
+        yields[sym] = 0;
+        if (supabase) await supabase.from("dividend_cache").upsert({ symbol: sym, yield_pct: 0, updated_at: today });
+        continue;
+      }
+      const price = await fetchPrevClose(sym, apiKey);
+      if (!price) {
         errors.push(`Polygon: no price for ${sym}`);
         continue;
       }
+      const y = +((perShare / price) * 100).toFixed(2);
       yields[sym] = y;
       if (supabase) await supabase.from("dividend_cache").upsert({ symbol: sym, yield_pct: y, updated_at: today });
     } catch (e) {

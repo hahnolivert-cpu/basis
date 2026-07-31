@@ -10,6 +10,7 @@ import { Card } from "@/components/ui";
 import { fetcher } from "@/lib/hooks/fetcher";
 import { useIncome } from "@/lib/hooks/useIncome";
 import { useEnrichedHoldings } from "@/lib/hooks/useEnrichedHoldings";
+import { useDividendSchedule } from "@/lib/hooks/useDividendSchedule";
 import { projectExpectedDividends } from "@/lib/expectedDividends";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 import type { MonthlyFlowDetailPayload, FlowTransaction } from "@/app/api/monthly-flows/route";
@@ -108,14 +109,15 @@ function ActivityDetail({ months }: { months: string[] }) {
 function ExpectedDetail({ monthIndex }: { monthIndex: number }) {
   const { holdings, isLoading: holdingsLoading } = useEnrichedHoldings();
   const { data: incomeData, isLoading: incomeLoading } = useIncome();
+  const { data: scheduleData, isLoading: scheduleLoading } = useDividendSchedule();
 
   const contributions = useMemo(() => {
     if (holdingsLoading || !incomeData) return [];
-    const projection = projectExpectedDividends(holdings, incomeData.transactions);
+    const projection = projectExpectedDividends(holdings, incomeData.transactions, scheduleData?.schedule ?? []);
     return projection[monthIndex]?.bySymbol ?? [];
-  }, [holdings, holdingsLoading, incomeData, monthIndex]);
+  }, [holdings, holdingsLoading, incomeData, scheduleData, monthIndex]);
 
-  if (holdingsLoading || incomeLoading) return <div style={{ fontFamily: mono, fontSize: 13, color: T.ink }}>Loading…</div>;
+  if (holdingsLoading || incomeLoading || scheduleLoading) return <div style={{ fontFamily: mono, fontSize: 13, color: T.ink }}>Loading…</div>;
   if (contributions.length === 0) return <div style={{ fontFamily: mono, fontSize: 13, color: T.ink }}>No expected payments projected for this month.</div>;
 
   const total = contributions.reduce((s, c) => s + c.amountCents, 0);

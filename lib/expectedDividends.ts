@@ -8,24 +8,8 @@ export type ExpectedContribution = { symbol: string; name: string; amountCents: 
 export type MonthlyExpected = { totalCents: number; bySymbol: ExpectedContribution[] };
 
 export type DividendTxnLike = { type: string; symbol: string | null; date: string; amountCents: number };
+export type ScheduleEntryLike = { symbol: string; exDividendDate: string; cashAmount: number };
 
-// A symbol's payment cadence — inferred from the average gap between its own
-// historical payment dates, not just which calendar months happen to appear
-// — decides how its annual expected income gets timed:
-//
-// - Monthly-equivalent payers (e.g. STRC, ~30-day gaps) get the annual total
-//   split evenly across all 12 months. Going purely off which months are
-//   already in the sync history would leave gaps for any month before the
-//   position was opened, even though a true monthly payer will pay in every
-//   one of them going forward.
-// - Everything less frequent (quarterly, semi-annual, or genuinely
-//   irregular payers like BIDD, which pays one small and one large
-//   distribution a year) gets the annual total split *proportionally* to
-//   how history actually divides across months, not evenly — an even split
-//   would misrepresent both the low and the high payment.
-//
-// A symbol with no dividend history at all can't be timed either way, so
-// it's left out rather than guessed at.
 const MONTHLY_CADENCE_THRESHOLD = 10; // payments/year at or above this count as "monthly"
 
 function inferPaymentsPerYear(datesSorted: string[]): number {
@@ -37,7 +21,35 @@ function inferPaymentsPerYear(datesSorted: string[]): number {
   return Math.round(365 / avgGap);
 }
 
-export function projectExpectedDividends(holdings: Holding[], dividendTxns: DividendTxnLike[]): MonthlyExpected[] {
+// `polygonSchedule` is the real, published record — actual ex-dividend
+// dates and actual per-share cash amounts, the same data a fund's own
+// distribution history/prospectus would show. Wherever it's available for a
+// held symbol, it's authoritative: multiply each payment's per-share amount
+// by the current quantity held and bucket it into the calendar month its
+// real ex-dividend date falls in. No guessing needed — this is what STRC's
+// floating monthly rate and BIDD's wildly uneven quarterly payouts actually
+// were, not an inference from however much of our own sync history exists.
+//
+// Only symbols Polygon doesn't cover (crypto, cash-sweep "yield" like
+// Treasury, or anything too thin to have a dividends record) fall back to
+// inferring cadence from our own transaction history: monthly-equivalent
+// payers (~30-day gaps) get the annual total split evenly across all 12
+// months, since going purely off which months are already in the sync
+// history would leave gaps for any month before the position was opened.
+// Everything less frequent gets the annual total split proportionally to
+// how history divides across months, not evenly.
+export function projectExpectedDividends(
+  holdings: Holding[],
+  dividendTxns: DividendTxnLike[],
+  polygonSchedule: ScheduleEntryLike[] = []
+): MonthlyExpected[] {
+  const scheduleBySymbol = new Map<string, ScheduleEntryLike[]>();
+  for (const e of polygonSchedule) {
+    if (!e.exDividendDate || e.cashAmount <= 0) continue;
+    if (!scheduleBySymbol.has(e.symbol)) scheduleBySymbol.set(e.symbol, []);
+    scheduleBySymbol.get(e.symbol)!.push(e);
+  }
+
   const eventsBySymbol = new Map<string, { date: string; amountCents: number }[]>();
   for (const t of dividendTxns) {
     if (t.type !== "dividend" || !t.symbol) continue;
@@ -48,6 +60,19 @@ export function projectExpectedDividends(holdings: Holding[], dividendTxns: Divi
   const result: MonthlyExpected[] = Array.from({ length: 12 }, () => ({ totalCents: 0, bySymbol: [] }));
 
   for (const h of mergeBySym(holdings)) {
+    const schedule = scheduleBySymbol.get(h.sym);
+    if (schedule && schedule.length > 0 && h.qty) {
+      for (const e of schedule) {
+        const idx = Number(e.exDividendDate.slice(5, 7)) - 1;
+        if (idx < 0 || idx > 11) continue;
+        const amountCents = Math.round(e.cashAmount * h.qty * 100);
+        if (amountCents <= 0) continue;
+        result[idx].totalCents += amountCents;
+        result[idx].bySymbol.push({ symbol: h.sym, name: h.name, amountCents });
+      }
+      continue;
+    }
+
     if (h.yld <= 0) continue;
     const events = eventsBySymbol.get(h.sym);
     if (!events || events.length === 0) continue;

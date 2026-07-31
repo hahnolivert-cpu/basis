@@ -3,25 +3,30 @@ import { T, mono } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { Card, Eyebrow } from "@/components/ui";
 import { useIncome } from "@/lib/hooks/useIncome";
+import { useDividendSchedule } from "@/lib/hooks/useDividendSchedule";
 import { projectExpectedDividends } from "@/lib/expectedDividends";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
+import type { DividendScheduleEntry } from "@/app/api/dividend-schedule/route";
 import type { Holding } from "@/lib/types";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const EMPTY: IncomeTransaction[] = [];
+const EMPTY_SCHEDULE: DividendScheduleEntry[] = [];
 
-// Forward projection, not history: each held symbol's annual expected income
-// (current value × trailing yield) is timed using its own payment cadence —
-// monthly payers get every month, less-frequent or irregular payers get
-// history's actual month-to-month split rather than a flat average. There's
-// no forward-looking ex-dividend/pay-date feed wired up, so timing is
-// inferred from the past — but the dollar amounts reflect today's position
-// sizes, not whatever was held when a past payment landed.
+// Forward projection, not history: each held symbol's annual expected
+// income is timed using its actual published dividend record where Polygon
+// covers it (real ex-dividend dates and real per-share amounts — the same
+// thing a fund's own distribution history shows), so a floating-rate
+// monthly payer or a wildly uneven quarterly payer comes through exactly as
+// it really pays. Symbols Polygon doesn't cover (crypto, cash-sweep yield)
+// fall back to inferring cadence from our own sync history.
 export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
   const { data } = useIncome();
   const rows = data?.transactions ?? EMPTY;
+  const { data: scheduleData } = useDividendSchedule();
+  const schedule = scheduleData?.schedule ?? EMPTY_SCHEDULE;
 
-  const projection = useMemo(() => projectExpectedDividends(holdings, rows), [holdings, rows]);
+  const projection = useMemo(() => projectExpectedDividends(holdings, rows, schedule), [holdings, rows, schedule]);
   const hasAny = projection.some((m) => m.totalCents > 0);
 
   const openMonth = (i: number) => window.open(`/month?category=expected&month=${i}`, "_blank");
@@ -30,7 +35,7 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
     <Card style={{ flex: 1, minWidth: 320 }}>
       <Eyebrow style={{ marginBottom: 4 }}>Dividend calendar · expected per month</Eyebrow>
       <div style={{ fontSize: 11.5, color: T.ink, marginBottom: 12 }}>
-        Projected from current holdings&apos; yield, timed to each symbol&apos;s own payment cadence.
+        Uses each symbol&apos;s real published dividend record where available, current position size applied.
       </div>
       {!hasAny ? (
         <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>Not enough dividend history to project a schedule yet.</div>
