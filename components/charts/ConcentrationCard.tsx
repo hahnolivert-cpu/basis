@@ -16,7 +16,7 @@ export function ConcentrationCard({
   // other composition chart on this tab.
   headerRight?: ReactNode;
 }) {
-  const top = mergeBySym(holdings).sort((a, b) => b.value - a.value).slice(0, 10);
+  const top = mergeBySym(holdings).sort((a, b) => b.value - a.value).slice(0, 15);
   const share = top.reduce((s, h) => s + h.value, 0) / total;
   return (
     <Card style={{ flex: 1, minWidth: 300 }}>
@@ -26,7 +26,7 @@ export function ConcentrationCard({
       </div>
       <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 600 }}>
         {(share * 100).toFixed(0)}%
-        <span style={{ fontSize: 14, color: T.ink, fontFamily: "'Inter', sans-serif", fontWeight: 400 }}> of assets in top 10 positions</span>
+        <span style={{ fontSize: 14, color: T.ink, fontFamily: "'Inter', sans-serif", fontWeight: 400 }}> of assets in top 15 positions</span>
       </div>
       <div style={{ marginTop: 12 }}>
         {top.map((h) => (
