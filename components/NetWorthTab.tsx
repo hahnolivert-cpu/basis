@@ -121,7 +121,7 @@ export function NetWorthTab({
     <div>
       {/* Entity split */}
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 22 }}>
-        <Card style={{ flex: 1.4, minWidth: 300 }}>
+        <Card style={{ flex: 1.4, minWidth: "min(300px, 100%)" }}>
           <Eyebrow>Where the wealth sits</Eyebrow>
           <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", marginBottom: 14 }}>
             <div style={{ width: `${(capital / total) * 100}%`, background: T.ledger }} />
@@ -156,7 +156,7 @@ export function NetWorthTab({
         </Card>
 
         {/* Estimated income */}
-        <Card style={{ flex: 1, minWidth: 280 }}>
+        <Card style={{ flex: 1, minWidth: "min(280px, 100%)" }}>
           <Eyebrow>Est. dividends &amp; interest</Eyebrow>
           <div style={{ fontFamily: serif, fontSize: 34, fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.ink, fontFamily: "inherit" }}> / yr</span></div>
           <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {usd(income / 12)} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
@@ -195,7 +195,7 @@ export function NetWorthTab({
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke={T.line} vertical={false} />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
                 <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} width={52} domain={["dataMin - 60000", "dataMax + 40000"]} />
                 <Tooltip
                   content={({ active, payload }) =>

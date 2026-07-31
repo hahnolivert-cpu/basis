@@ -36,7 +36,7 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
               </linearGradient>
             </defs>
             <CartesianGrid stroke={T.line} vertical={false} />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
             <YAxis
               tickFormatter={usdK}
               tickLine={false}

@@ -40,7 +40,7 @@ export function CompositionCard({
   const rows = rest > 0 ? [...keep, { name: "Other", value: rest }] : keep;
   const click = (name: string) => onSegmentClick?.(name, name === "Other" ? restNames : [name]);
   return (
-    <Card style={{ flex, minWidth: 420 }}>
+    <Card style={{ flex, minWidth: "min(420px, 100%)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Eyebrow>{title}</Eyebrow>
         {headerRight}

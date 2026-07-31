@@ -155,6 +155,8 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
       ) : (
         <>
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, marginTop: 18, overflow: "hidden" }}>
+        <div style={{ overflowX: "auto" }}>
+        <div style={{ minWidth: 720 }}>
         <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
           {COLS.map((c) => {
             const active = sort.key === c.key;
@@ -240,6 +242,8 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
             </div>
           </div>
         )}
+        </div>
+        </div>
       </div>
 
           <ManualPositions holdings={holdings} />

@@ -37,7 +37,7 @@ export function CompositionForecastCard({
               omitted in dollar mode so the bands' real size is what's plotted. */}
           <AreaChart data={points} stackOffset={mode === "pct" ? "expand" : undefined} margin={{ left: 8, right: 8, top: 6 }}>
             <CartesianGrid stroke={T.line} vertical={false} />
-            <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={3} />
+            <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
             <YAxis
               tickFormatter={mode === "pct" ? (v: number) => `${Math.round(v * 100)}%` : usdK}
               tickLine={false}

@@ -187,7 +187,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
             <div
               key={h.sym}
               style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap",
                 padding: "8px 0", borderTop: `1px solid ${T.line}`, fontSize: 13,
               }}
             >
@@ -197,7 +197,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
                   {h.name} · {h.acct}
                 </span>
               </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <span style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{h.qty}</span>
                 <span style={{ fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</span>
                 <button

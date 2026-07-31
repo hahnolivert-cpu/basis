@@ -29,7 +29,7 @@ export function IncomeHistoryCard() {
   const openMonth = (month: string) => window.open(`/month?months=${month}&category=income`, "_blank");
 
   return (
-    <Card style={{ flex: 1, minWidth: 320 }}>
+    <Card style={{ flex: 1, minWidth: "min(320px, 100%)" }}>
       <Eyebrow>Dividend + interest income · by month</Eyebrow>
       {monthly.length === 0 ? (
         <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>No dividend or interest history yet.</div>
@@ -38,7 +38,7 @@ export function IncomeHistoryCard() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthly} margin={{ left: 8, right: 8, top: 6 }}>
               <CartesianGrid stroke={T.line} vertical={false} />
-              <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={Math.ceil(monthly.length / 12)} />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
               <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} width={44} />
               <Tooltip
                 content={({ active, payload }) =>

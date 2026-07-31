@@ -32,7 +32,7 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
   const openMonth = (i: number) => window.open(`/month?category=expected&month=${i}`, "_blank");
 
   return (
-    <Card style={{ flex: 1, minWidth: 320 }}>
+    <Card style={{ flex: 1, minWidth: "min(320px, 100%)" }}>
       <Eyebrow style={{ marginBottom: 4 }}>Dividend calendar · expected per month</Eyebrow>
       <div style={{ fontSize: 11.5, color: T.ink, marginBottom: 12 }}>
         Uses each symbol&apos;s real published dividend record where available, current position size applied.

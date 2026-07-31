@@ -60,7 +60,7 @@ export function SignedBarCard({
   note?: string;
 }) {
   return (
-    <Card style={{ flex: 1, minWidth: 300 }}>
+    <Card style={{ flex: 1, minWidth: "min(300px, 100%)" }}>
       <Eyebrow>{title}</Eyebrow>
       <div style={{ height: Math.max(200, rows.length * 32) }}>
         <ResponsiveContainer width="100%" height="100%">

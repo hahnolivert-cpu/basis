@@ -57,7 +57,7 @@ export function CurrencyLensCard({ startNW, btcPx }: { startNW: number; btcPx: n
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data} margin={{ left: 8, right: 8, top: 6 }}>
                 <CartesianGrid stroke={T.line} vertical={false} />
-                <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
+                <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
                 <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} width={40} domain={["auto", "auto"]} />
                 <Tooltip
                   formatter={(v, n) => [v, n]}

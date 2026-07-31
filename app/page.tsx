@@ -65,8 +65,8 @@ export default function Home() {
               Ascentic
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", rowGap: 8 }}>
+            <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono, whiteSpace: "nowrap" }}>
               {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
             </span>
             <a
@@ -79,6 +79,15 @@ export default function Home() {
               + Connect
             </a>
             <SyncButton />
+            <a
+              href="/account"
+              style={{
+                fontSize: 12, color: T.inkSoft, fontFamily: mono, textDecoration: "none",
+                border: `1px solid ${T.line}`, borderRadius: 999, padding: "6px 13px",
+              }}
+            >
+              Account
+            </a>
             <button
               onClick={handleSignOut}
               style={{
@@ -115,7 +124,7 @@ export default function Home() {
           </div>
         </Card>
 
-        <div style={{ display: "flex", gap: 4, marginTop: 26, borderBottom: `1px solid ${T.line}` }}>
+        <div style={{ display: "flex", gap: 4, marginTop: 26, borderBottom: `1px solid ${T.line}`, overflowX: "auto" }}>
           {TABS.map(([id, label]) => (
             <button
               key={id}
@@ -124,6 +133,7 @@ export default function Home() {
                 background: "none", border: "none", cursor: "pointer", padding: "9px 16px 13px", fontFamily: "inherit",
                 fontSize: 14.5, fontWeight: tab === id ? 600 : 400, color: tab === id ? T.ink : T.inkSoft,
                 borderBottom: tab === id ? `2.5px solid ${T.ledger}` : "2.5px solid transparent", marginBottom: -1,
+                whiteSpace: "nowrap", flexShrink: 0,
               }}
             >
               {label}

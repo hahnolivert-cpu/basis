@@ -198,7 +198,7 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
                 </linearGradient>
               </defs>
               <CartesianGrid stroke={T.line} vertical={false} />
-              <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={3} />
+              <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
               <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} width={56} />
               <Tooltip content={<ChartTip />} />
               <Area type="monotone" dataKey="v" stroke="#C09A5B" strokeWidth={2} fill="url(#proj)" />

@@ -129,19 +129,26 @@ export function NetWorthFlowCard({ holdings, debts }: { holdings: Holding[]; deb
   return (
     <Card style={{ marginTop: 16 }}>
       <Eyebrow>Net worth flow · sources to net worth</Eyebrow>
-      <div style={{ height: 340 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <Sankey
-            data={{ nodes, links }}
-            sort={false}
-            nodePadding={26}
-            nodeWidth={14}
-            linkCurvature={0.5}
-            margin={{ top: 10, right: 150, bottom: 10, left: 130 }}
-            node={(props: SankeyNodeProps) => <FlowNode {...props} nodes={nodes} />}
-            link={{ stroke: T.line, strokeOpacity: 0.6, fill: T.ledger, fillOpacity: 0.18 }}
-          />
-        </ResponsiveContainer>
+      {/* The node labels need a fixed margin regardless of container width
+          (Recharts has no way to shrink them proportionally), so below the
+          width they were designed for the diagram itself collapses to a
+          sliver and labels overlap. Scrolling horizontally at a fixed
+          minWidth keeps it legible instead, same as the wide tables elsewhere. */}
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ height: 340, minWidth: 600 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <Sankey
+              data={{ nodes, links }}
+              sort={false}
+              nodePadding={26}
+              nodeWidth={14}
+              linkCurvature={0.5}
+              margin={{ top: 10, right: 150, bottom: 10, left: 130 }}
+              node={(props: SankeyNodeProps) => <FlowNode {...props} nodes={nodes} />}
+              link={{ stroke: T.line, strokeOpacity: 0.6, fill: T.ledger, fillOpacity: 0.18 }}
+            />
+          </ResponsiveContainer>
+        </div>
       </div>
     </Card>
   );

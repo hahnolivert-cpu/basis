@@ -24,7 +24,7 @@ export function AllocationHistoryCard({ rows }: { rows: WeeklyRow[] }) {
               100% stacked band chart regardless of how the total moved. */}
           <AreaChart data={rows} stackOffset="expand" margin={{ left: 8, right: 8, top: 6 }}>
             <CartesianGrid stroke={T.line} vertical={false} />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval={6} />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
             <YAxis
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               tickLine={false}

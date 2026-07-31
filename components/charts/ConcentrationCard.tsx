@@ -19,7 +19,7 @@ export function ConcentrationCard({
   const top = mergeBySym(holdings).sort((a, b) => b.value - a.value).slice(0, 15);
   const share = top.reduce((s, h) => s + h.value, 0) / total;
   return (
-    <Card style={{ flex: 1, minWidth: 300 }}>
+    <Card style={{ flex: 1, minWidth: "min(300px, 100%)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Eyebrow>Concentration</Eyebrow>
         {headerRight}
