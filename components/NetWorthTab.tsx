@@ -17,6 +17,7 @@ import { NetWorthFlowCard } from "@/components/charts/NetWorthFlowCard";
 import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
 import { IncomeHistoryCard } from "@/components/charts/IncomeHistoryCard";
 import { DividendCalendarCard } from "@/components/charts/DividendCalendarCard";
+import { MonthlyActivityCard } from "@/components/charts/MonthlyActivityCard";
 import type { Holding } from "@/lib/types";
 import type { Liability } from "@/app/api/liabilities/route";
 
@@ -259,6 +260,9 @@ export function NetWorthTab({
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
         <IncomeHistoryCard />
         <DividendCalendarCard holdings={holdings} />
+      </div>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
+        <MonthlyActivityCard />
       </div>
 
       {drilldown && (

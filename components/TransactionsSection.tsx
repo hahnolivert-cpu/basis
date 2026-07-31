@@ -8,7 +8,6 @@ import { formatTicker } from "@/lib/holdings";
 import { mergeBySym } from "@/lib/calc";
 import { useTransactions } from "@/lib/hooks/useTransactions";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
-import { MonthlyActivityCard } from "@/components/charts/MonthlyActivityCard";
 import type { TransactionRow } from "@/app/api/transactions/route";
 import type { Holding } from "@/lib/types";
 
@@ -249,10 +248,6 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
             )}
           </div>
         </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 20 }}>
-        <MonthlyActivityCard dateFrom={dateFrom} dateTo={dateTo} />
       </div>
     </div>
   );
