@@ -9,6 +9,8 @@ import { monthLabel } from "@/lib/weekly";
 import { Card } from "@/components/ui";
 import { fetcher } from "@/lib/hooks/fetcher";
 import { useIncome } from "@/lib/hooks/useIncome";
+import { useEnrichedHoldings } from "@/lib/hooks/useEnrichedHoldings";
+import { projectExpectedDividends } from "@/lib/expectedDividends";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 import type { MonthlyFlowDetailPayload, FlowTransaction } from "@/app/api/monthly-flows/route";
 
@@ -16,6 +18,8 @@ const TYPE_LABEL: Record<string, string> = {
   dividend: "Dividend", interest: "Interest", withholding_tax: "Withholding tax",
   buy: "Buy", sell: "Sell",
 };
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const thStyle = { textAlign: "left" as const, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: T.ink, padding: "8px 16px", borderBottom: `1px solid ${T.line}` };
 const tdStyle = { padding: "8px 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13, fontFamily: mono };
@@ -101,20 +105,75 @@ function ActivityDetail({ months }: { months: string[] }) {
   );
 }
 
+function ExpectedDetail({ monthIndex }: { monthIndex: number }) {
+  const { holdings, isLoading: holdingsLoading } = useEnrichedHoldings();
+  const { data: incomeData, isLoading: incomeLoading } = useIncome();
+
+  const contributions = useMemo(() => {
+    if (holdingsLoading || !incomeData) return [];
+    const projection = projectExpectedDividends(holdings, incomeData.transactions);
+    return projection[monthIndex]?.bySymbol ?? [];
+  }, [holdings, holdingsLoading, incomeData, monthIndex]);
+
+  if (holdingsLoading || incomeLoading) return <div style={{ fontFamily: mono, fontSize: 13, color: T.ink }}>Loading…</div>;
+  if (contributions.length === 0) return <div style={{ fontFamily: mono, fontSize: 13, color: T.ink }}>No expected payments projected for this month.</div>;
+
+  const total = contributions.reduce((s, c) => s + c.amountCents, 0);
+
+  return (
+    <>
+      <div style={{ fontFamily: mono, fontSize: 13, color: T.ink, marginBottom: 12 }}>
+        {contributions.length} positions · projected {usd(total / 100)}
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Symbol</th>
+            <th style={thStyle}>Name</th>
+            <th style={{ ...thStyle, textAlign: "right" }}>Expected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contributions.map((c, i) => (
+            <tr key={`${c.symbol}-${i}`}>
+              <td style={{ ...tdStyle, fontWeight: 600 }}>{c.symbol}</td>
+              <td style={{ ...tdStyle, fontFamily: "inherit" }}>{c.name}</td>
+              <td style={{ ...tdStyle, textAlign: "right", color: T.gain }}>{usd(c.amountCents / 100)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
 function MonthContent() {
   const params = useSearchParams();
-  const category = params.get("category") === "activity" ? "activity" : "income";
+  const category = params.get("category") === "activity" ? "activity" : params.get("category") === "expected" ? "expected" : "income";
   const months = (params.get("months") ?? "").split(",").filter(Boolean);
-  const label = months.map((m) => monthLabel(`${m}-01`)).join(" + ") || "—";
+  const monthIndex = Number(params.get("month") ?? "-1");
+
+  const label =
+    category === "expected"
+      ? MONTH_NAMES[monthIndex] ?? "—"
+      : months.map((m) => monthLabel(`${m}-01`)).join(" + ") || "—";
+  const subtitle =
+    category === "income" ? "Dividend & interest activity" : category === "activity" ? "Buy & sell activity" : "Projected dividend income";
 
   return (
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, padding: "32px 24px" }}>
       <div style={{ maxWidth: 780, margin: "0 auto" }}>
         <div style={{ fontFamily: serif, fontSize: 24, fontWeight: 600, marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 13, color: T.ink, marginBottom: 20 }}>
-          {category === "income" ? "Dividend & interest activity" : "Buy & sell activity"}
-        </div>
-        <Card>{category === "income" ? <IncomeDetail months={months} /> : <ActivityDetail months={months} />}</Card>
+        <div style={{ fontSize: 13, color: T.ink, marginBottom: 20 }}>{subtitle}</div>
+        <Card>
+          {category === "income" ? (
+            <IncomeDetail months={months} />
+          ) : category === "activity" ? (
+            <ActivityDetail months={months} />
+          ) : (
+            <ExpectedDetail monthIndex={monthIndex} />
+          )}
+        </Card>
       </div>
     </div>
   );

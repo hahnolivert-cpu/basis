@@ -15,6 +15,8 @@ import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard
 import { TrueExposureCard } from "@/components/charts/TrueExposureCard";
 import { NetWorthFlowCard } from "@/components/charts/NetWorthFlowCard";
 import { CurrencyLensCard } from "@/components/charts/CurrencyLensCard";
+import { IncomeHistoryCard } from "@/components/charts/IncomeHistoryCard";
+import { DividendCalendarCard } from "@/components/charts/DividendCalendarCard";
 import type { Holding } from "@/lib/types";
 import type { Liability } from "@/app/api/liabilities/route";
 
@@ -253,6 +255,11 @@ export function NetWorthTab({
         />
       </div>
       {weeklyRows.length > 0 && <AllocationHistoryCard rows={weeklyRows} />}
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
+        <IncomeHistoryCard />
+        <DividendCalendarCard holdings={holdings} />
+      </div>
 
       {drilldown && (
         <Modal title={drilldown.title} onClose={() => setDrilldown(null)}>

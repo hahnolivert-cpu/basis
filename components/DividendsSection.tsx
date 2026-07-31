@@ -6,8 +6,6 @@ import { usd } from "@/lib/format";
 import { Card, Eyebrow } from "@/components/ui";
 import { useIncome } from "@/lib/hooks/useIncome";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
-import { IncomeHistoryCard } from "@/components/charts/IncomeHistoryCard";
-import { DividendCalendarCard } from "@/components/charts/DividendCalendarCard";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 
 type SortKey = "date" | "source" | "type" | "portfolio" | "gross" | "withholding" | "net";
@@ -269,11 +267,6 @@ export function DividendsSection() {
             )}
           </div>
         </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 20 }}>
-        <IncomeHistoryCard dateFrom={dateFrom} dateTo={dateTo} />
-        <DividendCalendarCard dateFrom={dateFrom} dateTo={dateTo} />
       </div>
     </div>
   );

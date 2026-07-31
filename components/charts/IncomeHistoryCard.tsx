@@ -9,25 +9,22 @@ import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 
 const EMPTY: IncomeTransaction[] = [];
 
-// Net dividend + interest income (less withholding tax) per month, within
-// whatever date range the Dividends tab has selected — defaults to all
-// history when no range is passed.
-export function IncomeHistoryCard({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) {
+// Net dividend + interest income (less withholding tax) per month, going
+// back as far as the transaction history allows.
+export function IncomeHistoryCard() {
   const { data } = useIncome();
   const rows = data?.transactions ?? EMPTY;
 
   const monthly = useMemo(() => {
     const byMonth = new Map<string, number>();
     for (const t of rows) {
-      if (dateFrom && t.date < dateFrom) continue;
-      if (dateTo && t.date > dateTo) continue;
       const month = t.date.slice(0, 7);
       byMonth.set(month, (byMonth.get(month) ?? 0) + t.amountCents);
     }
     return Array.from(byMonth.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, cents]) => ({ month, label: monthLabel(`${month}-01`), net: cents / 100 }));
-  }, [rows, dateFrom, dateTo]);
+  }, [rows]);
 
   const openMonth = (month: string) => window.open(`/month?months=${month}&category=income`, "_blank");
 
@@ -35,7 +32,7 @@ export function IncomeHistoryCard({ dateFrom, dateTo }: { dateFrom?: string; dat
     <Card style={{ flex: 1, minWidth: 320 }}>
       <Eyebrow>Dividend + interest income · by month</Eyebrow>
       {monthly.length === 0 ? (
-        <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>No dividend or interest history in this period.</div>
+        <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono }}>No dividend or interest history yet.</div>
       ) : (
         <div style={{ height: 200 }}>
           <ResponsiveContainer width="100%" height="100%">
