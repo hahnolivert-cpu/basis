@@ -5,7 +5,7 @@ import { Card, Eyebrow } from "@/components/ui";
 
 const BANDS: [keyof Pick<WeeklyRow, "crypto" | "equities" | "cash">, string, string][] = [
   ["crypto", "Crypto", "#C09A5B"],
-  ["equities", "Equities", T.ledger],
+  ["equities", "Equities", T.gain],
   ["cash", "Cash", "#6E9D8D"],
 ];
 

@@ -113,17 +113,17 @@ export default function Home() {
             <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(22px, 4.5vw, 28px)", lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
             <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>{usd(total)} assets − {usd(debts)} debts</div>
           </Card>
-          <Card style={{ flex: 1, minWidth: 160 }}>
+          <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
             <Eyebrow style={{ marginBottom: 6 }}>1 day</Eyebrow>
-            <Delta pct={dayPct} amt={dayAmt} size={16} />
+            <Delta pct={dayPct} amt={dayAmt} size={13} />
           </Card>
-          <Card style={{ flex: 1, minWidth: 160 }}>
+          <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
             <Eyebrow style={{ marginBottom: 6 }}>Invested · all time</Eyebrow>
-            <Delta pct={gainPct} amt={gainAmt} size={16} />
+            <Delta pct={gainPct} amt={gainAmt} size={13} />
           </Card>
-          <Card style={{ flex: 1, minWidth: 160 }}>
+          <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
             <Eyebrow style={{ marginBottom: 6 }}>IRR · est. annualized</Eyebrow>
-            <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 16 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
+            <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
           </Card>
         </div>
 

@@ -115,7 +115,7 @@ export function TrueExposureCard({ holdings, netWorth }: { holdings: MaybeFund[]
                 ) : null
               }
             />
-            <Bar dataKey="direct" stackId="x" fill={T.ledger} barSize={15} />
+            <Bar dataKey="direct" stackId="x" fill={T.gain} barSize={15} />
             <Bar dataKey="viaEtf" stackId="x" fill="#9EBEB2" radius={[0, 4, 4, 0]} barSize={15} />
             <ExposureLabels rows={rows} netWorth={netWorth} />
           </BarChart>
@@ -123,7 +123,7 @@ export function TrueExposureCard({ holdings, netWorth }: { holdings: MaybeFund[]
       </div>
       <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 11, color: T.ink, fontFamily: mono, flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 8, height: 8, borderRadius: 2, background: T.ledger }} />Held directly
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: T.gain }} />Held directly
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: "#9EBEB2" }} />Via ETF holdings

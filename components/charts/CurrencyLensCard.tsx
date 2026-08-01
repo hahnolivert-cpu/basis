@@ -6,7 +6,7 @@ import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
 import { monthLabel } from "@/lib/weekly";
 
 const LINES: [string, string][] = [
-  ["USD", T.ledger],
+  ["USD", T.gain],
   ["EUR", "#2F4858"],
   ["BTC", "#C09A5B"],
 ];

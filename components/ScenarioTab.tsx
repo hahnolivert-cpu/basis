@@ -18,7 +18,7 @@ const monthsTo = (year: number) => (year - 2026) * 12 + 5; // Jul 2026 → Dec o
 // Bucket order doubles as stack order (bottom to top) in the forecast chart.
 const BUCKETS = ["Crypto", "Stocks", "ETFs", "Cash"] as const;
 type Bucket = (typeof BUCKETS)[number];
-const BUCKET_COLOR: Record<Bucket, string> = { Crypto: "#C09A5B", Stocks: T.ledger, ETFs: "#6E9D8D", Cash: "#2F4858" };
+const BUCKET_COLOR: Record<Bucket, string> = { Crypto: "#C09A5B", Stocks: T.gain, ETFs: "#6E9D8D", Cash: "#2F4858" };
 
 // Every input on this tab is remembered across visits (localStorage) — it's
 // a planning worksheet, not a one-off calculator, so re-typing the same

@@ -6,7 +6,7 @@ import { Card, Eyebrow } from "@/components/ui";
 import type { Holding, Portfolio } from "@/lib/types";
 
 const PF_LABEL: Record<Portfolio, string> = { capital: "976 Capital", personal: "Personal" };
-const PF_COLOR: Record<Portfolio, string> = { capital: T.ledger, personal: "#C09A5B" };
+const PF_COLOR: Record<Portfolio, string> = { capital: T.gain, personal: "#C09A5B" };
 const PF_ORDER: Portfolio[] = ["capital", "personal"];
 const BUCKET_COLOR: Record<string, string> = {
   Cash: "#E8A64A",
@@ -81,7 +81,7 @@ function buildSankey(holdings: Holding[], debts: number) {
 }
 
 function FlowNode({ nodes, x, y, width, height, index, payload }: SankeyNodeProps & { nodes: Node[] }) {
-  const color = nodes[index]?.color ?? T.ledger;
+  const color = nodes[index]?.color ?? T.gain;
   const isLeftmost = payload.depth === 0;
   const isRightmost = !payload.sourceLinks || payload.sourceLinks.length === 0;
   const labelInside = !isLeftmost && !isRightmost;
@@ -146,7 +146,7 @@ export function NetWorthFlowCard({ holdings, debts }: { holdings: Holding[]; deb
               linkCurvature={0.5}
               margin={{ top: 10, right: 150, bottom: 10, left: 130 }}
               node={(props: SankeyNodeProps) => <FlowNode {...props} nodes={nodes} />}
-              link={{ stroke: T.line, strokeOpacity: 0.6, fill: T.ledger, fillOpacity: 0.18 }}
+              link={{ stroke: T.line, strokeOpacity: 0.6, fill: T.gain, fillOpacity: 0.18 }}
             />
           </ResponsiveContainer>
         </div>

@@ -155,19 +155,19 @@ export function DividendsSection() {
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Dividends</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 16, color: T.gain }}>{usd(dividendsCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 13, color: T.gain }}>{usd(dividendsCents / 100)}</div>
         </Card>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Interest</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 16, color: T.gain }}>{usd(interestCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 13, color: T.gain }}>{usd(interestCents / 100)}</div>
         </Card>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Withholding tax</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 16, color: T.loss }}>{usd(withholdingCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 13, color: T.loss }}>{usd(withholdingCents / 100)}</div>
         </Card>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Net received</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 16, color: T.ink }}>{usd(netCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 13, color: T.ink }}>{usd(netCents / 100)}</div>
         </Card>
       </div>
 
