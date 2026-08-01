@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { T, mono } from "@/lib/theme";
-import { usd } from "@/lib/format";
+import { T, mono, serif } from "@/lib/theme";
+import { usd, sign } from "@/lib/format";
 import { Delta } from "@/components/ui";
 import { ManualPositions } from "@/components/ManualPositions";
 import { TransactionsSection } from "@/components/TransactionsSection";
@@ -47,6 +47,11 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
   const [pf, setPf] = usePersistedState<"all" | Portfolio | "transactions" | "dividends">("holdings.pf", "all");
   const [sort, setSort] = useState<Sort>({ key: "value", dir: "desc" });
   const isMobile = useIsMobile();
+  // Mobile rows are collapsed by default, showing only value + one gain
+  // figure (whichever this toggle picks) — the rest (cost basis, yield, the
+  // other gain figure) only shows once a row is tapped open.
+  const [gainMode, setGainMode] = usePersistedState<"day" | "total">("holdings.mobileGainMode", "day");
+  const [expandedSym, setExpandedSym] = useState<string | null>(null);
 
   // Cash consolidates into a single row regardless of symbol (Brex Treasury,
   // IBKR Cash, Chase checking, ...) — the ledger doesn't need per-account cash
@@ -155,7 +160,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
             </button>
           ))}
         </div>
-        {pf !== "transactions" && pf !== "dividends" && (
+        {pf !== "transactions" && pf !== "dividends" && !isMobile && (
           <div style={{ marginLeft: "auto", alignSelf: "center", fontFamily: mono, fontSize: 12.5, color: T.ink }}>{usd(total)}</div>
         )}
       </div>
@@ -169,109 +174,107 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, marginTop: 18, overflow: "hidden" }}>
         {isMobile ? (
           <>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
-              <select
-                value={sort.key}
-                onChange={(e) => clickSort(e.target.value as SortKey)}
-                style={{
-                  fontFamily: "inherit", fontSize: 11, color: T.ink, background: "none", border: `1px solid ${T.line}`,
-                  borderRadius: 6, padding: "4px 6px",
-                }}
-              >
-                {COLS.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    Sort: {c.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
-                style={{ fontFamily: "inherit", fontSize: 11, color: T.ink, background: "none", border: `1px solid ${T.line}`, borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}
-              >
-                {sort.dir === "asc" ? "▲ asc" : "▼ desc"}
-              </button>
+            <div style={{ padding: "16px 14px", borderBottom: `1px solid ${T.line}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                <div style={{ fontFamily: serif, fontWeight: 600, fontSize: 28, letterSpacing: "-0.01em" }}>{usd(total)}</div>
+                <div style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono, whiteSpace: "nowrap" }}>{counted.length} positions</div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
+                <span style={{ fontSize: 12.5, color: T.ink }}>Gain shown</span>
+                <div style={{ display: "flex", background: "#F4F7F5", borderRadius: 999, padding: 3, gap: 2 }}>
+                  {(["day", "total"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setGainMode(m)}
+                      style={{
+                        border: "none", cursor: "pointer", padding: "5px 16px", borderRadius: 999, fontFamily: "inherit",
+                        fontSize: 12, fontWeight: gainMode === m ? 600 : 400, color: T.ink,
+                        background: gainMode === m ? T.card : "none",
+                        boxShadow: gainMode === m ? "0 1px 3px rgba(21,32,25,0.15)" : "none",
+                      }}
+                    >
+                      {m === "day" ? "Day" : "Total"}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             {sorted.map((h) => {
               const isCash = h.cls === "Cash";
               const excluded = h.includedInNetWorth === false;
+              const expanded = expandedSym === h.sym;
+              const amt = gainMode === "day" ? h.dayAmt : h.gain;
+              const pct = gainMode === "day" ? h.day : h.gainPct;
+              // Cash never has a meaningful gain figure either way; a live
+              // day change of exactly 0 reads as "no change today" rather
+              // than a fabricated +0.00% that implies a price feed exists.
+              const noFigure = isCash || (gainMode === "day" && h.day === 0);
               return (
-                <div key={h.sym} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.line}`, opacity: excluded ? 0.55 : 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                <div key={h.sym}>
+                  <div
+                    onClick={() => setExpandedSym(expanded ? null : h.sym)}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10,
+                      padding: "13px 14px", borderBottom: expanded ? "none" : `1px solid ${T.line}`,
+                      opacity: excluded ? 0.55 : 1, cursor: "pointer",
+                    }}
+                  >
                     <div style={{ minWidth: 0, overflow: "hidden" }}>
-                      {isCash ? (
-                        <span style={{ fontWeight: 600, fontSize: 14 }}>Cash</span>
-                      ) : (
-                        <>
-                          <div style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 14 }}>
-                            {formatTicker(h.sym)}
-                            {h.sourceCount > 1 && (
-                              <span title={`Combined from ${h.sourceCount} accounts`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.ink }}>
-                                ×{h.sourceCount}
-                              </span>
-                            )}
-                            {excluded && (
-                              <span
-                                title="Not counted in net worth or any chart"
-                                style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.ink, border: `1px solid ${T.line}`, borderRadius: 4, padding: "1px 5px" }}
-                              >
-                                excluded
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: 11.5, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</div>
-                        </>
-                      )}
+                      <span style={{ fontWeight: 600, fontSize: 14.5, display: "inline-flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                        {isCash ? "Cash" : h.name}
+                        {h.sourceCount > 1 && <span style={{ fontSize: 11, fontWeight: 400, color: T.inkSoft }}>×{h.sourceCount}</span>}
+                        {excluded && (
+                          <span
+                            title="Not counted in net worth or any chart"
+                            style={{
+                              fontSize: 9, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase",
+                              color: T.inkSoft, border: `1px solid ${T.line}`, borderRadius: 4, padding: "2px 5px",
+                            }}
+                          >
+                            Excl.
+                          </span>
+                        )}
+                      </span>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontFamily: mono, fontWeight: 600, fontSize: 14 }}>{usd(h.value)}</div>
-                      <div style={{ fontSize: 10.5, color: T.ink, fontFamily: mono }}>{excluded ? "excluded" : `${h.pct.toFixed(1)}% of total`}</div>
+                      <div style={{ fontFamily: mono, fontWeight: 600, fontSize: 14.5 }}>{usd(h.value)}</div>
+                      <div style={{ fontSize: 11.5, fontFamily: mono, marginTop: 2, color: noFigure ? T.inkSoft : pct >= 0 ? T.gain : T.loss }}>
+                        {noFigure ? (gainMode === "day" ? "no change today" : "—") : `${sign(amt, usd(amt))} · ${sign(pct, pct.toFixed(2))}%`}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost</div>
-                      <div style={{ fontFamily: mono, fontSize: 12 }}>{isCash ? "—" : usd(h.cost)}</div>
+                  {expanded && (
+                    <div style={{ padding: "0 14px 14px", borderBottom: `1px solid ${T.line}`, background: "#FAFCFA" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost basis</div>
+                          <div style={{ fontFamily: mono, fontSize: 12, marginTop: 2 }}>{isCash ? "—" : usd(h.cost)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Yield</div>
+                          <div style={{ fontFamily: mono, fontSize: 12, marginTop: 2 }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Day</div>
+                          <div style={{ marginTop: 2 }}>
+                            {h.day === 0 ? <span style={{ fontFamily: mono, fontSize: 12 }}>—</span> : <Delta pct={h.day} amt={h.dayAmt} size={12} weight={600} />}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total gain</div>
+                          <div style={{ marginTop: 2 }}>
+                            {isCash ? <span style={{ fontFamily: mono, fontSize: 12 }}>—</span> : <Delta pct={h.gainPct} amt={h.gain} size={12} weight={600} />}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Yield</div>
-                      <div style={{ fontFamily: mono, fontSize: 12 }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Day</div>
-                      {h.day === 0 ? <div style={{ fontFamily: mono, fontSize: 12 }}>—</div> : <Delta pct={h.day} amt={h.dayAmt} size={12} weight={600} />}
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total gain</div>
-                    {isCash ? <div style={{ fontFamily: mono, fontSize: 12 }}>—</div> : <Delta pct={h.gainPct} amt={h.gain} size={12} weight={600} />}
-                  </div>
+                  )}
                 </div>
               );
             })}
             {sorted.length > 0 && (
-              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>Total ({counted.length})</span>
-                  <span style={{ fontFamily: mono, fontWeight: 600, fontSize: 14 }}>{usd(total)}</span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost</div>
-                    <div style={{ fontFamily: mono, fontSize: 12 }}>{usd(totalCost)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Yield</div>
-                    <div style={{ fontFamily: mono, fontSize: 12 }}>{blendedYld > 0 ? blendedYld.toFixed(2) + "%" : "—"}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Day</div>
-                    <Delta pct={totalDayPct} amt={totalDayAmt} size={12} weight={600} />
-                  </div>
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total gain</div>
-                  <Delta pct={totalGainPct} amt={totalGain} size={12} weight={600} />
-                </div>
+              <div style={{ padding: "14px", textAlign: "center", fontSize: 11.5, color: T.inkSoft }}>
+                Tap a row for cost basis, yield &amp; both gain figures
               </div>
             )}
           </>

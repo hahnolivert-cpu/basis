@@ -12,7 +12,7 @@ import { HoldingsTab } from "@/components/HoldingsTab";
 import { ScenarioTab } from "@/components/ScenarioTab";
 import { TrackingTab } from "@/components/TrackingTab";
 import { EarningsTab } from "@/components/EarningsTab";
-import { SyncButton } from "@/components/SyncButton";
+import { AccountMenu } from "@/components/AccountMenu";
 import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
 import { useEnrichedHoldings } from "@/lib/hooks/useEnrichedHoldings";
@@ -90,38 +90,11 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", rowGap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "nowrap" }}>
             <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono, whiteSpace: "nowrap" }}>
               {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
             </span>
-            <a
-              href="/link"
-              style={{
-                fontSize: 12, color: T.inkSoft, fontFamily: mono, textDecoration: "none",
-                border: `1px solid ${T.line}`, borderRadius: 999, padding: "6px 13px",
-              }}
-            >
-              + Connect
-            </a>
-            <SyncButton />
-            <a
-              href="/account"
-              style={{
-                fontSize: 12, color: T.inkSoft, fontFamily: mono, textDecoration: "none",
-                border: `1px solid ${T.line}`, borderRadius: 999, padding: "6px 13px",
-              }}
-            >
-              Account
-            </a>
-            <button
-              onClick={handleSignOut}
-              style={{
-                background: "none", cursor: "pointer", border: `1px solid ${T.line}`, borderRadius: 999,
-                padding: "6px 13px", fontFamily: "inherit", fontSize: 12, color: T.inkSoft,
-              }}
-            >
-              Sign out
-            </button>
+            <AccountMenu onSignOut={handleSignOut} />
           </div>
         </div>
 
