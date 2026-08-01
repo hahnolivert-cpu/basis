@@ -64,12 +64,30 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "34px 24px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
-            <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
-            <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gain, fontWeight: 600 }}>
-              Ascentic
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, paddingBottom: 14, borderBottom: `1px solid ${T.line}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", rowGap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
+              <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
+              <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gain, fontWeight: 600 }}>
+                Ascentic
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>
+              {TABS.map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  style={{
+                    border: "none", cursor: "pointer", padding: "6px 12px", fontFamily: "inherit", borderRadius: 999,
+                    fontSize: 13.5, fontWeight: tab === id ? 600 : 400,
+                    background: tab === id ? T.gain : "none", color: tab === id ? "#fff" : T.inkSoft,
+                    whiteSpace: "nowrap", flexShrink: 0,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", rowGap: 8 }}>
@@ -114,34 +132,17 @@ export default function Home() {
             <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>{usd(total)} assets − {usd(debts)} debts</div>
           </Card>
           <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
-            <Eyebrow style={{ marginBottom: 6 }}>1 day</Eyebrow>
+            <Eyebrow style={{ marginBottom: 6 }}>Daily</Eyebrow>
             <Delta pct={dayPct} amt={dayAmt} size={13} />
           </Card>
           <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
-            <Eyebrow style={{ marginBottom: 6 }}>Invested · all time</Eyebrow>
+            <Eyebrow style={{ marginBottom: 6 }}>All Time</Eyebrow>
             <Delta pct={gainPct} amt={gainAmt} size={13} />
           </Card>
           <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
-            <Eyebrow style={{ marginBottom: 6 }}>IRR · est. annualized</Eyebrow>
+            <Eyebrow style={{ marginBottom: 6 }}>IRR</Eyebrow>
             <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
           </Card>
-        </div>
-
-        <div style={{ display: "flex", gap: 4, marginTop: 26, borderBottom: `1px solid ${T.line}`, overflowX: "auto" }}>
-          {TABS.map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              style={{
-                background: "none", border: "none", cursor: "pointer", padding: "9px 16px 13px", fontFamily: "inherit",
-                fontSize: 14.5, fontWeight: tab === id ? 600 : 400, color: tab === id ? T.ink : T.inkSoft,
-                borderBottom: tab === id ? `2.5px solid ${T.gain}` : "2.5px solid transparent", marginBottom: -1,
-                whiteSpace: "nowrap", flexShrink: 0,
-              }}
-            >
-              {label}
-            </button>
-          ))}
         </div>
 
         {tab === "networth" && (
