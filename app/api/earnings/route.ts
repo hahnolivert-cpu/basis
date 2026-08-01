@@ -166,6 +166,10 @@ export async function GET() {
       .returns<EarningsCacheRow[]>();
     for (const row of cached ?? []) {
       if (row.updated_at !== today) continue;
+      // Same "nothing here" guard as the fetch path below — a cached empty
+      // result (e.g. a private/illiquid manual position) stays marked fresh
+      // so it isn't retried, but shouldn't render as an entry either.
+      if (row.next_date === null && row.history.length === 0) continue;
       bySymbol.set(row.symbol, {
         symbol: row.symbol,
         nextDate: row.next_date,
@@ -205,7 +209,15 @@ export async function GET() {
         nextRevenueEstimate: next?.revenueEstimate ?? null,
         history,
       };
-      bySymbol.set(dbSym, entry);
+      // No upcoming date and no reported quarters — Finnhub has nothing on
+      // this symbol at all, which for a real, currently-listed company
+      // basically doesn't happen. In practice this is a manually-entered
+      // private/illiquid position (no public listing to report against),
+      // same category of noise as a fund. Still cached as checked-today
+      // (so it's not retried on every request, burning API calls forever),
+      // just never surfaced to the UI.
+      const isEmpty = entry.nextDate === null && entry.history.length === 0;
+      if (!isEmpty) bySymbol.set(dbSym, entry);
       if (supabase) {
         await supabase.from("earnings_cache").upsert({
           symbol: dbSym,

@@ -46,7 +46,12 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
   const [note, setNote] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
-  const manual = holdings.filter((h) => h.institution === SELF_CUSTODY_INSTITUTION);
+  // Sorted, not just filtered — the API has no explicit ORDER BY, so an
+  // unsorted list can silently reorder between requests (e.g. right after a
+  // toggle's own refresh). A row shifting under a user mid-interaction means
+  // their next click lands on a different position than the one they saw,
+  // which is exactly how a toggle click ends up hitting the wrong holding.
+  const manual = holdings.filter((h) => h.institution === SELF_CUSTODY_INSTITUTION).sort((a, b) => a.sym.localeCompare(b.sym));
 
   const refresh = () => Promise.all([mutate("/api/holdings"), mutate("/api/quotes")]);
 
