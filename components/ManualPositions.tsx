@@ -239,6 +239,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
                   on={h.includedInNetWorth}
                   setOn={(v) => toggleIncluded(h.sym, v)}
                   label={h.includedInNetWorth ? "In net worth" : "Excluded"}
+                  disabled={busy}
                 />
                 <button
                   onClick={() => remove(h.sym)}

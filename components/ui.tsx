@@ -77,15 +77,17 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   );
 }
 
-export function Toggle({ on, setOn, label }: { on: boolean; setOn: (v: boolean) => void; label: string }) {
+export function Toggle({ on, setOn, label, disabled }: { on: boolean; setOn: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
     <button
-      onClick={() => setOn(!on)}
+      onClick={() => !disabled && setOn(!on)}
+      disabled={disabled}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 9, cursor: "pointer",
+        display: "inline-flex", alignItems: "center", gap: 9, cursor: disabled ? "wait" : "pointer",
         background: on ? T.ledger : T.card, color: on ? "#fff" : T.ink,
         border: `1px solid ${on ? T.ledger : T.line}`, borderRadius: 999,
         padding: "7px 14px", fontFamily: "inherit", fontSize: 13, fontWeight: 500, transition: "all 160ms ease",
+        opacity: disabled ? 0.6 : 1,
       }}
     >
       <span style={{ width: 26, height: 14, borderRadius: 999, background: on ? "#ffffff44" : T.line, position: "relative", display: "inline-block" }}>
