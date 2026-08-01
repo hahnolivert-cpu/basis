@@ -84,8 +84,8 @@ export function Toggle({ on, setOn, label, disabled }: { on: boolean; setOn: (v:
       disabled={disabled}
       style={{
         display: "inline-flex", alignItems: "center", gap: 9, cursor: disabled ? "wait" : "pointer",
-        background: on ? T.ledger : T.card, color: on ? "#fff" : T.ink,
-        border: `1px solid ${on ? T.ledger : T.line}`, borderRadius: 999,
+        background: on ? T.gain : T.card, color: on ? "#fff" : T.ink,
+        border: `1px solid ${on ? T.gain : T.line}`, borderRadius: 999,
         padding: "7px 14px", fontFamily: "inherit", fontSize: 13, fontWeight: 500, transition: "all 160ms ease",
         opacity: disabled ? 0.6 : 1,
       }}

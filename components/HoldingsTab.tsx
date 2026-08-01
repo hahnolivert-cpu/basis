@@ -147,7 +147,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
               style={{
                 background: "none", border: "none", cursor: "pointer", padding: "8px 14px 12px", fontFamily: "inherit",
                 fontSize: 14, fontWeight: pf === id ? 600 : 400, color: pf === id ? T.ink : T.ink,
-                borderBottom: pf === id ? `2px solid ${T.ledger}` : "2px solid transparent", marginBottom: -1,
+                borderBottom: pf === id ? `2px solid ${T.gain}` : "2px solid transparent", marginBottom: -1,
                 whiteSpace: "nowrap", flexShrink: 0,
               }}
             >
@@ -202,7 +202,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                         <span style={{ fontWeight: 600, fontSize: 14 }}>Cash</span>
                       ) : (
                         <>
-                          <div style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 14 }}>
+                          <div style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 14 }}>
                             {formatTicker(h.sym)}
                             {h.sourceCount > 1 && (
                               <span title={`Combined from ${h.sourceCount} accounts`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.ink }}>
@@ -249,7 +249,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
               );
             })}
             {sorted.length > 0 && (
-              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}` }}>
+              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Total ({counted.length})</span>
                   <span style={{ fontFamily: mono, fontWeight: 600, fontSize: 14 }}>{usd(total)}</span>
@@ -288,7 +288,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                 style={{
                   background: "none", border: "none", cursor: "pointer", padding: "8px 0", fontFamily: "inherit",
                   fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: active ? 700 : 500,
-                  color: active ? T.ledger : T.ink, textAlign: c.align, display: "flex",
+                  color: active ? T.gain : T.ink, textAlign: c.align, display: "flex",
                   justifyContent: c.align === "right" ? "flex-end" : "flex-start", alignItems: "center", gap: 4,
                 }}
               >
@@ -318,7 +318,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                   <span style={{ fontWeight: 600 }}>Cash</span>
                 ) : (
                   <>
-                    <span style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.sym}>
+                    <span style={{ fontFamily: mono, fontWeight: 700, color: T.gain, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.sym}>
                       {formatTicker(h.sym)}
                       {h.sourceCount > 1 && (
                         <span
@@ -357,7 +357,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
             style={{
               display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
               padding: "0 16px", fontSize: 13, color: T.ink,
-              background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`,
+              background: "#EAF3EE", borderTop: `2px solid ${T.gain}`,
             }}
           >
             <div>Total ({counted.length})</div>

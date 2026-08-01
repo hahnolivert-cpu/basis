@@ -31,8 +31,8 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
           <AreaChart data={rows} margin={{ left: 8, right: 8, top: 6 }}>
             <defs>
               <linearGradient id="weeklyTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={T.ledger} stopOpacity={0.28} />
-                <stop offset="100%" stopColor={T.ledger} stopOpacity={0} />
+                <stop offset="0%" stopColor={T.gain} stopOpacity={0.28} />
+                <stop offset="100%" stopColor={T.gain} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke={T.line} vertical={false} />
@@ -70,7 +70,7 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
                 }}
               />
             ))}
-            <Area type="monotone" dataKey="total" stroke={T.ledger} strokeWidth={2} fill="url(#weeklyTotal)" />
+            <Area type="monotone" dataKey="total" stroke={T.gain} strokeWidth={2} fill="url(#weeklyTotal)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>

@@ -26,7 +26,7 @@ export function ConcentrationCard({
       </div>
       <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 600 }}>
         {(share * 100).toFixed(0)}%
-        <span style={{ fontSize: 14, color: T.ink, fontFamily: "'Inter', sans-serif", fontWeight: 400 }}> of assets in top 15 positions</span>
+        <span style={{ fontSize: 14, color: T.ink, fontFamily: "inherit", fontWeight: 400 }}> of assets in top 15 positions</span>
       </div>
       <div style={{ marginTop: 12 }}>
         {top.map((h) => (
@@ -36,7 +36,7 @@ export function ConcentrationCard({
               <span style={{ fontFamily: mono, color: T.ink }}>{usd(h.value)} · {((h.value / total) * 100).toFixed(1)}%</span>
             </div>
             <div style={{ height: 7, background: "#EDF2EE", borderRadius: 4 }}>
-              <div style={{ height: "100%", width: `${(h.value / total) * 100}%`, background: T.ledger, borderRadius: 4 }} />
+              <div style={{ height: "100%", width: `${(h.value / total) * 100}%`, background: T.gain, borderRadius: 4 }} />
             </div>
           </div>
         ))}

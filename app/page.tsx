@@ -68,7 +68,7 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
             <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
-            <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
+            <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gain, fontWeight: 600 }}>
               Ascentic
             </div>
           </div>
@@ -107,29 +107,25 @@ export default function Home() {
           </div>
         </div>
 
-        <Card style={{ marginTop: 22, padding: "26px 28px" }}>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
-            <div>
-              <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
-              <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(34px, 9vw, 54px)", lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
-              <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>{usd(total)} assets − {usd(debts)} debts</div>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap" }}>
-              <div style={{ padding: "0 22px 0 0", display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 10.5, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.1em" }}>1 day</span>
-                <Delta pct={dayPct} amt={dayAmt} size={15} />
-              </div>
-              <div style={{ padding: "0 22px", borderLeft: `1px solid ${T.line}`, display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 10.5, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.1em" }}>Invested · all time</span>
-                <Delta pct={gainPct} amt={gainAmt} size={15} />
-              </div>
-              <div style={{ padding: "0 0 0 22px", borderLeft: `1px solid ${T.line}`, display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 10.5, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.1em" }}>IRR · est. annualized</span>
-                <span style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 15 }}>{sign(irr, irr.toFixed(1))}%/yr</span>
-              </div>
-            </div>
-          </div>
-        </Card>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 22 }}>
+          <Card style={{ flex: 2, minWidth: 260 }}>
+            <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
+            <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(22px, 4.5vw, 28px)", lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
+            <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>{usd(total)} assets − {usd(debts)} debts</div>
+          </Card>
+          <Card style={{ flex: 1, minWidth: 160 }}>
+            <Eyebrow style={{ marginBottom: 6 }}>1 day</Eyebrow>
+            <Delta pct={dayPct} amt={dayAmt} size={16} />
+          </Card>
+          <Card style={{ flex: 1, minWidth: 160 }}>
+            <Eyebrow style={{ marginBottom: 6 }}>Invested · all time</Eyebrow>
+            <Delta pct={gainPct} amt={gainAmt} size={16} />
+          </Card>
+          <Card style={{ flex: 1, minWidth: 160 }}>
+            <Eyebrow style={{ marginBottom: 6 }}>IRR · est. annualized</Eyebrow>
+            <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 16 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
+          </Card>
+        </div>
 
         <div style={{ display: "flex", gap: 4, marginTop: 26, borderBottom: `1px solid ${T.line}`, overflowX: "auto" }}>
           {TABS.map(([id, label]) => (
@@ -139,7 +135,7 @@ export default function Home() {
               style={{
                 background: "none", border: "none", cursor: "pointer", padding: "9px 16px 13px", fontFamily: "inherit",
                 fontSize: 14.5, fontWeight: tab === id ? 600 : 400, color: tab === id ? T.ink : T.inkSoft,
-                borderBottom: tab === id ? `2.5px solid ${T.ledger}` : "2.5px solid transparent", marginBottom: -1,
+                borderBottom: tab === id ? `2.5px solid ${T.gain}` : "2.5px solid transparent", marginBottom: -1,
                 whiteSpace: "nowrap", flexShrink: 0,
               }}
             >

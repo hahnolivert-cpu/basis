@@ -170,8 +170,8 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
         <button
           onClick={() => setOpen((v) => !v)}
           style={{
-            cursor: "pointer", background: open ? T.card : T.ledger, color: open ? T.ledger : "#fff",
-            border: `1px solid ${T.ledger}`, borderRadius: 999, padding: "6px 14px",
+            cursor: "pointer", background: open ? T.card : T.gain, color: open ? T.gain : "#fff",
+            border: `1px solid ${T.gain}`, borderRadius: 999, padding: "6px 14px",
             fontFamily: "inherit", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
           }}
         >
@@ -240,7 +240,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
             type="submit"
             disabled={busy}
             style={{
-              cursor: busy ? "wait" : "pointer", background: T.ledger, color: "#fff", border: "none",
+              cursor: busy ? "wait" : "pointer", background: T.gain, color: "#fff", border: "none",
               borderRadius: 8, padding: "9px 18px", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
             }}
           >

@@ -77,8 +77,8 @@ export function SyncButton() {
         style={{
           cursor: busy ? "wait" : "pointer",
           background: T.card,
-          color: T.ledger,
-          border: `1px solid ${T.ledger}`,
+          color: T.gain,
+          border: `1px solid ${T.gain}`,
           borderRadius: 999,
           padding: "6px 14px",
           fontFamily: "inherit",

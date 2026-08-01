@@ -99,7 +99,7 @@ function LinkButton({ target, onLinked }: { target: Target; onLinked: () => void
         onClick={start}
         disabled={busy}
         style={{
-          cursor: busy ? "wait" : "pointer", background: T.ledger, color: "#fff", border: "none",
+          cursor: busy ? "wait" : "pointer", background: T.gain, color: "#fff", border: "none",
           borderRadius: 999, padding: "8px 16px", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600,
           whiteSpace: "nowrap",
         }}
@@ -130,7 +130,7 @@ export default function LinkPage() {
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "34px 24px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 10 }}>
-          <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
+          <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gain, fontWeight: 600 }}>
             Ascentic <span style={{ color: T.inkSoft, fontWeight: 400, letterSpacing: 0, textTransform: "none" }}>· connect accounts</span>
           </div>
           <Link href="/" style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono }}>

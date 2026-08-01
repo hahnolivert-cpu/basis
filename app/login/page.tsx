@@ -74,7 +74,7 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 32px mark */}
           <img src="/logo.png" alt="" width={32} height={32} style={{ display: "block", margin: "0 auto 10px" }} />
-          <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.ledger, fontWeight: 600 }}>
+          <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gain, fontWeight: 600 }}>
             Ascentic
           </div>
           <div style={{ fontFamily: serif, fontSize: 30, fontWeight: 600, marginTop: 10 }}>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                   style={{
                     background: "none", border: "none", cursor: "pointer", padding: "8px 4px 12px", marginRight: 16, fontFamily: "inherit",
                     fontSize: 13.5, fontWeight: mode === id ? 600 : 400, color: mode === id ? T.ink : T.inkSoft,
-                    borderBottom: mode === id ? `2px solid ${T.ledger}` : "2px solid transparent", marginBottom: -1,
+                    borderBottom: mode === id ? `2px solid ${T.gain}` : "2px solid transparent", marginBottom: -1,
                   }}
                 >
                   {label}
@@ -143,7 +143,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               style={{
-                width: "100%", cursor: loading ? "wait" : "pointer", background: T.ledger, color: "#fff",
+                width: "100%", cursor: loading ? "wait" : "pointer", background: T.gain, color: "#fff",
                 border: "none", borderRadius: 8, padding: "11px 0", fontFamily: "inherit", fontSize: 14, fontWeight: 600,
               }}
             >

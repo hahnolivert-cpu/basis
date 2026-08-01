@@ -27,7 +27,7 @@ const labelCaption: React.CSSProperties = {
 
 const buttonStyle: React.CSSProperties = {
   cursor: "pointer",
-  background: T.ledger,
+  background: T.gain,
   color: "#fff",
   border: "none",
   borderRadius: 8,

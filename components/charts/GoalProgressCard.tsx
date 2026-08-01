@@ -25,7 +25,7 @@ export function GoalProgressCard({ rows }: { rows: WeeklyRow[] }) {
                     <>
                       {pct.toFixed(1)}% <span style={{ opacity: 0.75 }}>· {usd(goal - total)} to go</span>
                       {weeks !== null && (
-                        <span style={{ color: T.ledger, marginLeft: 8 }}>{etaLabel(weeks, latest.date)}</span>
+                        <span style={{ color: T.gain, marginLeft: 8 }}>{etaLabel(weeks, latest.date)}</span>
                       )}
                     </>
                   )}
@@ -36,7 +36,7 @@ export function GoalProgressCard({ rows }: { rows: WeeklyRow[] }) {
                   style={{
                     height: "100%",
                     width: `${Math.min(pct, 100)}%`,
-                    background: achieved ? T.gain : T.ledger,
+                    background: achieved ? T.gain : T.gain,
                     borderRadius: 5,
                   }}
                 />

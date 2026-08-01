@@ -102,7 +102,7 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
                   onClick={() => setMode(id)}
                   style={{
                     border: "none", cursor: "pointer", padding: "8px 13px", fontFamily: "inherit", fontSize: 12.5, fontWeight: 500,
-                    background: mode === id ? T.ledger : T.card, color: mode === id ? "#fff" : T.ink,
+                    background: mode === id ? T.gain : T.card, color: mode === id ? "#fff" : T.ink,
                   }}
                 >
                   {label}
@@ -193,15 +193,15 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
             <AreaChart data={projection} margin={{ left: 8, right: 8, top: 6 }}>
               <defs>
                 <linearGradient id="proj" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#C09A5B" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#C09A5B" stopOpacity={0} />
+                  <stop offset="0%" stopColor={T.gain} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={T.gain} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke={T.line} vertical={false} />
               <XAxis dataKey="m" tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} interval="preserveStartEnd" />
               <YAxis tickFormatter={usdK} tickLine={false} axisLine={false} tick={{ fontSize: 10.5, fill: T.ink, fontFamily: mono }} width={56} />
               <Tooltip content={<ChartTip />} />
-              <Area type="monotone" dataKey="v" stroke="#C09A5B" strokeWidth={2} fill="url(#proj)" />
+              <Area type="monotone" dataKey="v" stroke={T.gain} strokeWidth={2} fill="url(#proj)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

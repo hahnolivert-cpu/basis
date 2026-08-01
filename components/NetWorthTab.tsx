@@ -124,13 +124,13 @@ export function NetWorthTab({
         <Card style={{ flex: 1.4, minWidth: "min(300px, 100%)" }}>
           <Eyebrow>Where the wealth sits</Eyebrow>
           <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", marginBottom: 14 }}>
-            <div style={{ width: `${(capital / total) * 100}%`, background: T.ledger }} />
-            <div style={{ width: `${(personal / total) * 100}%`, background: "#C09A5B" }} />
+            <div style={{ width: `${(capital / total) * 100}%`, background: T.gain }} />
+            <div style={{ width: `${(personal / total) * 100}%`, background: T.ink }} />
           </div>
           {(
             [
-              ["976 Capital", capital, T.ledger],
-              ["Personal", personal, "#C09A5B"],
+              ["976 Capital", capital, T.gain],
+              ["Personal", personal, T.ink],
             ] as [string, number, string][]
           ).map(([n, v, c]) => (
             <div key={n} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5 }}>
@@ -190,8 +190,8 @@ export function NetWorthTab({
               <AreaChart data={weeklyRows} margin={{ left: 8, right: 8, top: 6 }}>
                 <defs>
                   <linearGradient id="nw" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={T.ledger} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={T.ledger} stopOpacity={0} />
+                    <stop offset="0%" stopColor={T.gain} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={T.gain} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke={T.line} vertical={false} />
@@ -206,7 +206,7 @@ export function NetWorthTab({
                     ) : null
                   }
                 />
-                <Area type="monotone" dataKey="total" stroke={T.ledger} strokeWidth={2} fill="url(#nw)" />
+                <Area type="monotone" dataKey="total" stroke={T.gain} strokeWidth={2} fill="url(#nw)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

@@ -155,19 +155,19 @@ export function DividendsSection() {
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Dividends</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 20, color: T.gain }}>{usd(dividendsCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 16, color: T.gain }}>{usd(dividendsCents / 100)}</div>
         </Card>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Interest</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 20, color: T.gain }}>{usd(interestCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 16, color: T.gain }}>{usd(interestCents / 100)}</div>
         </Card>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Withholding tax</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 20, color: T.loss }}>{usd(withholdingCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 16, color: T.loss }}>{usd(withholdingCents / 100)}</div>
         </Card>
         <Card style={{ flex: 1, minWidth: 160 }}>
           <Eyebrow style={{ marginBottom: 6 }}>Net received</Eyebrow>
-          <div style={{ fontFamily: mono, fontSize: 20, color: T.ink }}>{usd(netCents / 100)}</div>
+          <div style={{ fontFamily: mono, fontSize: 16, color: T.ink }}>{usd(netCents / 100)}</div>
         </Card>
       </div>
 
@@ -229,10 +229,10 @@ export function DividendsSection() {
               <div key={r.id} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.line}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   <div>
-                    <div style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 14 }} title={r.name}>
+                    <div style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 14 }} title={r.name}>
                       {r.source}
                     </div>
-                    <div style={{ fontSize: 11.5, color: r.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
+                    <div style={{ fontSize: 11.5, color: r.portfolio === "capital" ? T.gain : T.ink }}>
                       {TYPE_LABEL[r.type]} · {r.portfolio === "capital" ? "976 Capital" : "Personal"}
                     </div>
                   </div>
@@ -257,7 +257,7 @@ export function DividendsSection() {
               </div>
             ))}
             {sorted.length > 0 && (
-              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}` }}>
+              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}` }}>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Total ({sorted.length})</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                   <div>
@@ -289,7 +289,7 @@ export function DividendsSection() {
                     style={{
                       background: "none", border: "none", cursor: "pointer", padding: "8px 0", fontFamily: "inherit",
                       fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: active ? 700 : 500,
-                      color: active ? T.ledger : T.ink, textAlign: c.align, display: "flex",
+                      color: active ? T.gain : T.ink, textAlign: c.align, display: "flex",
                       justifyContent: c.align === "right" ? "flex-end" : "flex-start", alignItems: "center", gap: 4,
                     }}
                   >
@@ -311,7 +311,7 @@ export function DividendsSection() {
                   {r.source}
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{TYPE_LABEL[r.type]}</div>
-                <div style={{ fontFamily: mono, fontSize: 12, color: r.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
+                <div style={{ fontFamily: mono, fontSize: 12, color: r.portfolio === "capital" ? T.gain : T.ink }}>
                   {r.portfolio === "capital" ? "976 Capital" : "Personal"}
                 </div>
                 <div style={{ textAlign: "right", fontFamily: mono, color: r.grossCents > 0 ? T.gain : T.ink }}>
@@ -327,7 +327,7 @@ export function DividendsSection() {
             ))}
 
             {sorted.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`, fontSize: 13 }}>
+              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}`, fontSize: 13 }}>
                 <div style={{ gridColumn: "1 / 4" }}>Total ({sorted.length})</div>
                 <div />
                 <div style={{ textAlign: "right", fontFamily: mono, color: T.gain }}>{usd(totalGross / 100)}</div>

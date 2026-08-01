@@ -60,7 +60,7 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
                   style={{
                     background: "none", border: "none", cursor: "pointer", padding: "10px 0", fontFamily: "inherit",
                     fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: active ? 700 : 500,
-                    color: active ? T.ledger : T.ink, textAlign: c.align, display: "flex",
+                    color: active ? T.gain : T.ink, textAlign: c.align, display: "flex",
                     justifyContent: c.align === "right" ? "flex-end" : "flex-start", alignItems: "center", gap: 4,
                   }}
                 >
@@ -87,7 +87,7 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
                   title={r.source === "auto" ? "Written automatically by the Sunday cron" : "Imported from spreadsheet history"}
                   style={{
                     width: 5, height: 5, borderRadius: "50%", flexShrink: 0,
-                    background: r.source === "auto" ? T.ledger : T.line,
+                    background: r.source === "auto" ? T.gain : T.line,
                   }}
                 />
                 {r.date}

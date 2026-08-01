@@ -12,27 +12,29 @@ import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import type { TransactionRow } from "@/app/api/transactions/route";
 import type { Holding } from "@/lib/types";
 
-type SortKey = "date" | "asset" | "portfolio" | "recurring" | "qty" | "buyPrice" | "currentPrice" | "totalBuy" | "totalCurrent" | "gainPct";
+type SortKey = "date" | "type" | "asset" | "portfolio" | "recurring" | "qty" | "buyPrice" | "currentPrice" | "totalBuy" | "totalCurrent" | "gainPct";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 type AssetTypeFilter = "all" | "Stocks" | "ETFs" | "Crypto";
 type PerformanceFilter = "all" | "winners" | "losers";
 type RecurringFilter = "all" | "recurring" | "one-off";
+type TradeTypeFilter = "all" | "buy" | "sell";
 
 type Row = TransactionRow & { currentPrice: number | null; currentValueCents: number | null; gainCents: number | null; gainPct: number | null };
 
 const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "date", label: "Date", align: "left" },
+  { key: "type", label: "Type", align: "left" },
   { key: "asset", label: "Asset", align: "left" },
   { key: "portfolio", label: "Portfolio", align: "left" },
   { key: "recurring", label: "Recurring", align: "left" },
   { key: "qty", label: "Qty", align: "right" },
-  { key: "buyPrice", label: "Buy price", align: "right" },
+  { key: "buyPrice", label: "Price", align: "right" },
   { key: "currentPrice", label: "Current price", align: "right" },
-  { key: "totalBuy", label: "Total buy", align: "right" },
+  { key: "totalBuy", label: "Total", align: "right" },
   { key: "totalCurrent", label: "Total current", align: "right" },
   { key: "gainPct", label: "Gain since buy", align: "right" },
 ];
-const GRID = "0.9fr 0.7fr 0.8fr 0.75fr 0.7fr 0.9fr 0.9fr 1fr 1.05fr 1.25fr";
+const GRID = "0.9fr 0.55fr 0.7fr 0.8fr 0.75fr 0.7fr 0.9fr 0.9fr 1fr 1.05fr 1.25fr";
 
 // Filters default to year-to-date across all asset classes on first visit;
 // after that, usePersistedState remembers whatever the user last set.
@@ -46,6 +48,19 @@ const inputStyle = {
 const bucketOf = (t: TransactionRow): "Stocks" | "ETFs" | "Crypto" | "Cash" =>
   t.assetClass !== "Equities" ? (t.assetClass as "Crypto" | "Cash") : t.isEtf ? "ETFs" : "Stocks";
 
+function TradeBadge({ type }: { type: "buy" | "sell" }) {
+  return (
+    <span
+      style={{
+        fontFamily: mono, fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
+        color: type === "buy" ? T.gain : T.loss,
+      }}
+    >
+      {type}
+    </span>
+  );
+}
+
 const EMPTY_TRANSACTIONS: TransactionRow[] = [];
 
 export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
@@ -58,6 +73,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
   const [assetQuery, setAssetQuery] = usePersistedState("tx.assetQuery", "");
   const [performance, setPerformance] = usePersistedState<PerformanceFilter>("tx.performance", "all");
   const [recurring, setRecurring] = usePersistedState<RecurringFilter>("tx.recurring", "all");
+  const [tradeType, setTradeType] = usePersistedState<TradeTypeFilter>("tx.tradeType", "all");
   const [sort, setSort] = usePersistedState<Sort>("tx.sort", { key: "date", dir: "desc" });
   const isMobile = useIsMobile();
 
@@ -72,9 +88,14 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
     return map;
   }, [holdings]);
 
+  // "Gain since buy" only means something for a buy row held against its
+  // original cost — a sell has already realized its outcome, and comparing
+  // its proceeds to the current price of whatever's left of that symbol
+  // would just be a different, misleading number, so sells skip enrichment.
   const enriched = useMemo<Row[]>(
     () =>
       raw.map((t) => {
+        if (t.type !== "buy") return { ...t, currentPrice: null, currentValueCents: null, gainCents: null, gainPct: null };
         const currentPrice = priceBySymbol.get(t.symbol) ?? null;
         const currentValueCents = currentPrice !== null ? Math.round(currentPrice * t.qty * 100) : null;
         const gainCents = currentValueCents !== null ? currentValueCents - t.totalCents : null;
@@ -91,13 +112,14 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
         if (dateTo && t.date > dateTo) return false;
         if (assetType !== "all" && bucketOf(t) !== assetType) return false;
         if (assetQuery && !`${t.symbol} ${t.name}`.toLowerCase().includes(assetQuery.toLowerCase())) return false;
+        if (tradeType !== "all" && t.type !== tradeType) return false;
         if (performance === "winners" && !(t.gainPct !== null && t.gainPct > 0)) return false;
         if (performance === "losers" && !(t.gainPct !== null && t.gainPct < 0)) return false;
         if (recurring === "recurring" && !t.isRecurring) return false;
         if (recurring === "one-off" && t.isRecurring) return false;
         return true;
       }),
-    [enriched, dateFrom, dateTo, assetType, assetQuery, performance, recurring]
+    [enriched, dateFrom, dateTo, assetType, assetQuery, tradeType, performance, recurring]
   );
 
   const sorted = useMemo(() => {
@@ -106,6 +128,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
     const val = (r: Row): number | string => {
       switch (key) {
         case "date": return r.date;
+        case "type": return r.type;
         case "asset": return r.symbol;
         case "portfolio": return r.portfolio;
         case "recurring": return r.isRecurring ? 1 : 0;
@@ -128,7 +151,9 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
   const clickSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "date" ? "desc" : "desc" }));
 
-  const totalCostCents = sorted.reduce((s, t) => s + t.totalCents, 0);
+  // Sell proceeds aren't cost basis — summing them into "Total" alongside
+  // buys would inflate it with money that came back out, not money put in.
+  const totalCostCents = sorted.filter((t) => t.type === "buy").reduce((s, t) => s + t.totalCents, 0);
   const totalCurrentCents = sorted.reduce((s, t) => s + (t.currentValueCents ?? 0), 0);
   const totalGainCents = totalCurrentCents - sorted.filter((t) => t.currentValueCents !== null).reduce((s, t) => s + t.totalCents, 0);
   const totalGainPct = totalCostCents > 0 ? (totalGainCents / sorted.filter((t) => t.currentValueCents !== null).reduce((s, t) => s + t.totalCents, 0)) * 100 : 0;
@@ -151,6 +176,11 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
             <option value="Stocks">Stocks</option>
             <option value="ETFs">ETFs</option>
             <option value="Crypto">Crypto</option>
+          </select>
+          <select value={tradeType} onChange={(e) => setTradeType(e.target.value as TradeTypeFilter)} style={inputStyle}>
+            <option value="all">Buys + sells</option>
+            <option value="buy">Buys only</option>
+            <option value="sell">Sells only</option>
           </select>
           <input
             type="text"
@@ -178,7 +208,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
         )}
         {!isLoading && sorted.length === 0 && (
           <div style={{ padding: "16px", fontSize: 12.5, color: T.ink, fontFamily: mono }}>
-            {data?.error ? `Could not load transactions: ${data.error}` : "No buy transactions match these filters."}
+            {data?.error ? `Could not load transactions: ${data.error}` : "No transactions match these filters."}
           </div>
         )}
         {isMobile ? (
@@ -206,10 +236,13 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
               <div key={t.id} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.line}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                   <div>
-                    <div style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 14 }} title={t.name}>
-                      {formatTicker(t.symbol)}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <TradeBadge type={t.type} />
+                      <div style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 14 }} title={t.name}>
+                        {formatTicker(t.symbol)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11.5, color: t.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
+                    <div style={{ fontSize: 11.5, color: t.portfolio === "capital" ? T.gain : T.ink }}>
                       {t.portfolio === "capital" ? "976 Capital" : "Personal"} · {t.isRecurring ? "Recurring" : "One-off"}
                     </div>
                   </div>
@@ -221,7 +254,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                     <div style={{ fontFamily: mono, fontSize: 12 }}>{t.qty.toLocaleString("en-US", { maximumFractionDigits: 4 })}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Buy price</div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Price</div>
                     <div style={{ fontFamily: mono, fontSize: 12 }}>{usd(t.priceCents / 100, 2)}</div>
                   </div>
                   <div>
@@ -231,12 +264,14 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
                   <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total buy</div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total</div>
                     <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 500 }}>{usd(t.totalCents / 100)}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total current</div>
-                    <div style={{ fontFamily: mono, fontSize: 12 }}>{t.currentValueCents !== null ? usd(t.currentValueCents / 100) : "closed"}</div>
+                    <div style={{ fontFamily: mono, fontSize: 12 }}>
+                      {t.currentValueCents !== null ? usd(t.currentValueCents / 100) : t.type === "sell" ? "—" : "closed"}
+                    </div>
                   </div>
                 </div>
                 <div style={{ marginTop: 8 }}>
@@ -246,13 +281,13 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
               </div>
             ))}
             {sorted.length > 0 && (
-              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}` }}>
+              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Total ({sorted.length})</span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
                   <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total buy</div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total (buys)</div>
                     <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 500 }}>{usd(totalCostCents / 100)}</div>
                   </div>
                   <div>
@@ -269,7 +304,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
           </>
         ) : (
         <div style={{ overflowX: "auto" }}>
-          <div style={{ minWidth: 900 }}>
+          <div style={{ minWidth: 950 }}>
             <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
               {COLS.map((c) => {
                 const active = sort.key === c.key;
@@ -280,7 +315,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                     style={{
                       background: "none", border: "none", cursor: "pointer", padding: "8px 0", fontFamily: "inherit",
                       fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: active ? 700 : 500,
-                      color: active ? T.ledger : T.ink, textAlign: c.align, display: "flex",
+                      color: active ? T.gain : T.ink, textAlign: c.align, display: "flex",
                       justifyContent: c.align === "right" ? "flex-end" : "flex-start", alignItems: "center", gap: 4,
                     }}
                   >
@@ -298,10 +333,13 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "8px 16px", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}
               >
                 <div style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{t.date}</div>
+                <div>
+                  <TradeBadge type={t.type} />
+                </div>
                 <div style={{ fontFamily: mono, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.name}>
                   {formatTicker(t.symbol)}
                 </div>
-                <div style={{ fontFamily: mono, fontSize: 12, color: t.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
+                <div style={{ fontFamily: mono, fontSize: 12, color: t.portfolio === "capital" ? T.gain : T.ink }}>
                   {t.portfolio === "capital" ? "976 Capital" : "Personal"}
                 </div>
                 <div style={{ fontFamily: mono, fontSize: 12, color: t.isRecurring ? T.ink : T.ink }}>{t.isRecurring ? "Yes" : "No"}</div>
@@ -312,7 +350,11 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 </div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500 }}>{usd(t.totalCents / 100)}</div>
                 <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12 }}>
-                  {t.currentValueCents !== null ? usd(t.currentValueCents / 100) : <span style={{ color: T.ink }}>closed</span>}
+                  {t.currentValueCents !== null ? (
+                    usd(t.currentValueCents / 100)
+                  ) : (
+                    <span style={{ color: T.ink }}>{t.type === "sell" ? "—" : "closed"}</span>
+                  )}
                 </div>
                 <div style={{ textAlign: "right" }}>
                   {t.gainPct !== null ? <Delta pct={t.gainPct} amt={t.gainCents! / 100} size={12} weight={600} /> : <span style={{ color: T.ink, fontFamily: mono, fontSize: 12 }}>—</span>}
@@ -321,13 +363,13 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
             ))}
 
             {sorted.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}`, fontSize: 13 }}>
-                <div style={{ gridColumn: "1 / 4" }}>Total ({sorted.length})</div>
+              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}`, fontSize: 13 }}>
+                <div style={{ gridColumn: "1 / 5" }}>Total ({sorted.length})</div>
                 <div />
                 <div />
                 <div />
                 <div />
-                <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCostCents / 100)}</div>
+                <div style={{ textAlign: "right", fontFamily: mono }} title="Buys only — sell proceeds aren't cost basis">{usd(totalCostCents / 100)}</div>
                 <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCurrentCents / 100)}</div>
                 <div style={{ textAlign: "right" }}>
                   <Delta pct={totalGainPct} amt={totalGainCents / 100} size={12} weight={600} />

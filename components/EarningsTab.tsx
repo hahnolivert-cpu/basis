@@ -77,7 +77,7 @@ export function EarningsTab({ holdings }: { holdings: Holding[] }) {
               const days = e.nextDate ? daysUntil(e.nextDate) : null;
               return (
                 <div key={e.symbol} style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px" }}>
-                  <div style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 13 }} title={name}>
+                  <div style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 13 }} title={name}>
                     {e.symbol}
                   </div>
                   <div style={{ fontFamily: mono, fontSize: 12, color: T.ink, marginTop: 2 }}>{e.nextDate}</div>
@@ -97,7 +97,7 @@ export function EarningsTab({ holdings }: { holdings: Holding[] }) {
             <Card key={e.symbol}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 <div>
-                  <span style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 15 }}>{e.symbol}</span>
+                  <span style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 15 }}>{e.symbol}</span>
                   <span style={{ color: T.ink, fontSize: 12, marginLeft: 8 }}>{name}</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
