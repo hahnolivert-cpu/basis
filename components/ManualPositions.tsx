@@ -5,6 +5,7 @@ import { useSWRConfig } from "swr";
 import { T, mono, serif } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { Card, Eyebrow, Toggle } from "@/components/ui";
+import { fetcher } from "@/lib/hooks/fetcher";
 import type { Holding } from "@/lib/types";
 
 // Matched on institution, not is_manual: seeded provider estimates also carry
@@ -62,7 +63,19 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
   // which is exactly how a toggle click ends up hitting the wrong holding.
   const manual = holdings.filter((h) => h.institution === SELF_CUSTODY_INSTITUTION).sort((a, b) => a.sym.localeCompare(b.sym));
 
-  const refresh = () => Promise.all([mutate("/api/holdings"), mutate("/api/quotes")]);
+  // Fetches fresh data ourselves and writes it straight into the SWR cache,
+  // rather than calling mutate(key) to trigger revalidation — that form
+  // reuses whatever request SWR already has in flight for the key (its
+  // dedupingInterval), which can be one that started before this write
+  // landed, silently serving pre-write data as if it were fresh with nothing
+  // to correct it until the next full reload.
+  const refresh = async () => {
+    const [holdings, quotes] = await Promise.all([fetcher("/api/holdings"), fetcher("/api/quotes")]);
+    await Promise.all([
+      mutate("/api/holdings", holdings, { revalidate: false }),
+      mutate("/api/quotes", quotes, { revalidate: false }),
+    ]);
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

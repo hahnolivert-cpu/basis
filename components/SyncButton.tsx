@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSWRConfig } from "swr";
 import { T, mono } from "@/lib/theme";
+import { fetcher } from "@/lib/hooks/fetcher";
 
 type Result = { target: string; ok: boolean; error?: string; applied?: Record<string, number> };
 
@@ -39,12 +40,22 @@ export function SyncButton() {
         setNote(parts.length ? `Synced ${parts.join(", ")}` : "Already up to date");
       }
 
-      // Pull the refreshed holdings/quotes through the dashboard's hooks.
+      // Fetch fresh data ourselves and write it straight into the SWR cache
+      // rather than calling mutate(key) to trigger revalidation — that form
+      // reuses whatever request SWR already has in flight for the key (its
+      // dedupingInterval), which can be one that started before this sync
+      // landed, silently serving pre-sync data as if it were fresh.
+      const [holdings, quotes, dividends, weeklySnapshots] = await Promise.all([
+        fetcher("/api/holdings"),
+        fetcher("/api/quotes"),
+        fetcher("/api/dividends"),
+        fetcher("/api/weekly-snapshots"),
+      ]);
       await Promise.all([
-        mutate("/api/holdings"),
-        mutate("/api/quotes"),
-        mutate("/api/dividends"),
-        mutate("/api/weekly-snapshots"),
+        mutate("/api/holdings", holdings, { revalidate: false }),
+        mutate("/api/quotes", quotes, { revalidate: false }),
+        mutate("/api/dividends", dividends, { revalidate: false }),
+        mutate("/api/weekly-snapshots", weeklySnapshots, { revalidate: false }),
       ]);
     } catch (e) {
       setFailed(true);
