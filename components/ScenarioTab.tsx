@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
 import { T, mono, serif } from "@/lib/theme";
 import { usd, usdK } from "@/lib/format";
-import { fvCalc, fvWithLumpSums, reqMonthly, reqReturn, subclass } from "@/lib/calc";
+import { fvWithLumpSums, reqMonthly, reqReturn, subclass } from "@/lib/calc";
 import { Card } from "@/components/ui";
 import { ChartTip } from "@/components/charts/ChartTip";
 import { CompositionForecastCard, type CompositionPoint } from "@/components/charts/CompositionForecastCard";
