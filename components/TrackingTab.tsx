@@ -9,6 +9,7 @@ import { WeeklyTotalCard } from "@/components/charts/WeeklyTotalCard";
 import { GoalProgressCard } from "@/components/charts/GoalProgressCard";
 import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard";
 import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
+import type { Holding } from "@/lib/types";
 
 type SortKey = "date" | "crypto" | "equities" | "cash" | "total" | "wowAmt" | "wowPct" | "eur" | "btc";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
@@ -112,9 +113,20 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
   );
 }
 
-export function TrackingTab() {
+export function TrackingTab({ holdings = [] }: { holdings?: Holding[] }) {
   const { data, isLoading } = useWeeklySnapshots();
   const rows = useMemo(() => toRows(data?.snapshots ?? []), [data]);
+
+  // Angel investments (Strala) never flow into the weekly snapshot's own
+  // crypto/equities/cash buckets — the cron that writes weekly_snapshots
+  // doesn't sum that class at all — so the historical series is structurally
+  // blind to it. Layer today's value back on top here, live, and only when
+  // its own "in net worth" toggle is on, so this stays consistent with how
+  // the toggle already governs every other total in the app.
+  const angelValue = useMemo(
+    () => holdings.filter((h) => h.cls === "Angel Investment" && h.includedInNetWorth).reduce((s, h) => s + h.value, 0),
+    [holdings]
+  );
 
   if (isLoading) {
     return (
@@ -141,8 +153,8 @@ export function TrackingTab() {
 
   return (
     <div>
-      <WeeklyTotalCard rows={rows} />
-      <GoalProgressCard rows={rows} />
+      <WeeklyTotalCard rows={rows} angelValue={angelValue} />
+      <GoalProgressCard rows={rows} angelValue={angelValue} />
       <AllocationHistoryCard rows={rows} />
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 30, marginBottom: 2 }}>Weekly detail</div>
       <div style={{ fontSize: 12, color: T.ink }}>

@@ -14,6 +14,24 @@ export const fvCalc = (P: number, monthly: number, annual: number, months: numbe
   return P * g + monthly * ((g - 1) / r);
 };
 
+export type LumpSum = { month: number; amount: number };
+
+// Layers one-off lump sums (a bonus, an inheritance) on top of the regular
+// monthly-contribution projection. Each one compounds independently from the
+// month it lands rather than being blended into the monthly rate, so a $50k
+// bonus at month 14 grows for (months - 14) periods, not the full span.
+// Ignored once due before the projection starts or after its horizon ends.
+export const fvWithLumpSums = (P: number, monthly: number, annual: number, months: number, lumpSums: LumpSum[]) => {
+  const r = annual / 12;
+  let fv = fvCalc(P, monthly, annual, months);
+  for (const { month, amount } of lumpSums) {
+    if (month < 0 || month > months) continue;
+    const remaining = months - month;
+    fv += r === 0 ? amount : amount * Math.pow(1 + r, remaining);
+  }
+  return fv;
+};
+
 export const reqMonthly = (target: number, P: number, annual: number, months: number) => {
   const r = annual / 12;
   const g = Math.pow(1 + r, months);

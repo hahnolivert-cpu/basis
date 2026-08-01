@@ -155,7 +155,7 @@ export default function Home() {
           />
         )}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
-        {tab === "tracking" && <TrackingTab />}
+        {tab === "tracking" && <TrackingTab holdings={holdings} />}
         {tab === "earnings" && <EarningsTab holdings={netWorthHoldings} />}
         {tab === "scenarios" && <ScenarioTab startNW={startNW} holdings={netWorthHoldings} />}
 

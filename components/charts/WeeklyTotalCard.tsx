@@ -4,7 +4,7 @@ import { usd, usdK } from "@/lib/format";
 import { GOALS, type WeeklyRow } from "@/lib/weekly";
 import { Card, Eyebrow } from "@/components/ui";
 
-export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
+export function WeeklyTotalCard({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?: number }) {
   const latest = rows.at(-1);
   const max = Math.max(...rows.map((r) => r.total));
 
@@ -21,8 +21,15 @@ export function WeeklyTotalCard({ rows }: { rows: WeeklyRow[] }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
         <Eyebrow style={{ marginBottom: 0 }}>Net worth · weekly · {rows.length} weeks</Eyebrow>
         {latest && (
-          <div style={{ fontFamily: mono, fontSize: 12.5, color: T.ink }}>
-            {usd(latest.total)} as of {latest.date}
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: mono, fontSize: 12.5, color: T.ink }}>
+              {usd(latest.total)} as of {latest.date}
+            </div>
+            {angelValue > 0 && (
+              <div style={{ fontFamily: mono, fontSize: 11, color: T.inkSoft, marginTop: 2 }}>
+                {usd(latest.total + angelValue)} incl. Strala
+              </div>
+            )}
           </div>
         )}
       </div>

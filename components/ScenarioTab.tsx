@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
 import { T, mono, serif } from "@/lib/theme";
 import { usd, usdK } from "@/lib/format";
-import { fvCalc, reqMonthly, reqReturn, subclass } from "@/lib/calc";
+import { fvCalc, fvWithLumpSums, reqMonthly, reqReturn, subclass } from "@/lib/calc";
 import { Card } from "@/components/ui";
 import { ChartTip } from "@/components/charts/ChartTip";
 import { CompositionForecastCard, type CompositionPoint } from "@/components/charts/CompositionForecastCard";
@@ -29,6 +29,15 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
   const [assumedMonthly, setAssumedMonthly] = usePersistedState("basis:scenario:assumedMonthly", 5000);
   const [planMonthly, setPlanMonthly] = usePersistedState("basis:scenario:planMonthly", 5000);
   const [planReturn, setPlanReturn] = usePersistedState("basis:scenario:planReturn", 7);
+  const [oneTimePayments, setOneTimePayments] = usePersistedState<{ id: string; label: string; amount: number; year: number }[]>(
+    "basis:scenario:oneTimePayments",
+    []
+  );
+  const addPayment = () =>
+    setOneTimePayments((ps) => [...ps, { id: crypto.randomUUID(), label: "Bonus", amount: 10000, year: new Date().getFullYear() }]);
+  const updatePayment = (id: string, patch: Partial<{ label: string; amount: number; year: number }>) =>
+    setOneTimePayments((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  const removePayment = (id: string) => setOneTimePayments((ps) => ps.filter((p) => p.id !== id));
 
   // "Status quo" starting point for the composition forecast — today's actual
   // holdings, bucketed the same way the Asset Class chart on the Net Worth
@@ -68,13 +77,18 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
     return points;
   }, [statusQuo, monthlyByBucket, returnByBucket]);
 
+  const lumpSums = useMemo(
+    () => oneTimePayments.map((p) => ({ month: monthsTo(p.year), amount: p.amount })),
+    [oneTimePayments]
+  );
+
   const projection = useMemo(() => {
     const pts = [];
     for (let y = 2026; y <= 2050; y++) {
-      pts.push({ m: String(y), v: Math.round(fvCalc(startNW, planMonthly, planReturn / 100, Math.max(0, monthsTo(y)))) });
+      pts.push({ m: String(y), v: Math.round(fvWithLumpSums(startNW, planMonthly, planReturn / 100, Math.max(0, monthsTo(y)), lumpSums)) });
     }
     return pts;
-  }, [startNW, planMonthly, planReturn]);
+  }, [startNW, planMonthly, planReturn, lumpSums]);
 
   const inputStyle = { fontFamily: mono, fontSize: 14, padding: "8px 10px", border: `1px solid ${T.line}`, borderRadius: 8, width: 110, background: T.card, color: T.ink };
   const th = { padding: "10px 12px", fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: T.ink, textAlign: "right" as const, borderBottom: `1px solid ${T.line}` };
@@ -174,9 +188,62 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
           </div>
         </div>
 
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: T.ink, marginBottom: 8 }}>
+            One-time payments
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {oneTimePayments.map((p) => (
+              <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  type="text"
+                  value={p.label}
+                  placeholder="Bonus"
+                  onChange={(e) => updatePayment(p.id, { label: e.target.value })}
+                  style={{ ...inputStyle, width: 130 }}
+                />
+                <label style={{ fontSize: 12.5, color: T.ink, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  $<input
+                    type="number"
+                    value={p.amount}
+                    step={1000}
+                    onChange={(e) => updatePayment(p.id, { amount: +e.target.value })}
+                    style={{ ...inputStyle, width: 100 }}
+                  />
+                </label>
+                <label style={{ fontSize: 12.5, color: T.ink, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  in <input
+                    type="number"
+                    value={p.year}
+                    step={1}
+                    onChange={(e) => updatePayment(p.id, { year: +e.target.value })}
+                    style={{ ...inputStyle, width: 70 }}
+                  />
+                </label>
+                <button
+                  onClick={() => removePayment(p.id)}
+                  aria-label="Remove one-time payment"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: T.loss, fontSize: 17, lineHeight: 1, padding: "0 4px" }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={addPayment}
+              style={{
+                alignSelf: "flex-start", background: "none", border: `1px dashed ${T.line}`, borderRadius: 8,
+                padding: "6px 12px", fontFamily: "inherit", fontSize: 12.5, color: T.gain, cursor: "pointer",
+              }}
+            >
+              + Add one-time payment
+            </button>
+          </div>
+        </div>
+
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
           {YEARS.map((y) => {
-            const v = fvCalc(startNW, planMonthly, planReturn / 100, monthsTo(y));
+            const v = fvWithLumpSums(startNW, planMonthly, planReturn / 100, monthsTo(y), lumpSums);
             const hit = TARGETS.filter((t) => v >= t).pop();
             return (
               <div key={y} style={{ flex: 1, minWidth: 130, border: `1px solid ${T.line}`, borderRadius: 8, padding: "12px 14px", background: "#FAFCFA" }}>
