@@ -6,6 +6,7 @@ import { usd } from "@/lib/format";
 import { Card, Eyebrow } from "@/components/ui";
 import { useIncome } from "@/lib/hooks/useIncome";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 
 type SortKey = "date" | "source" | "type" | "portfolio" | "gross" | "withholding" | "net";
@@ -58,6 +59,7 @@ export function DividendsSection() {
   const [typeFilter, setTypeFilter] = usePersistedState<TypeFilter>("div.type", "all");
   const [assetQuery, setAssetQuery] = usePersistedState("div.assetQuery", "");
   const [sort, setSort] = usePersistedState<Sort>("div.sort", { key: "date", dir: "desc" });
+  const isMobile = useIsMobile();
 
   // Withholding tax arrives from IBKR as its own cash-transaction line, dated
   // and symbol-matched to the dividend it was withheld against — fold it
@@ -194,6 +196,87 @@ export function DividendsSection() {
       </Card>
 
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, overflow: "hidden" }}>
+        {isLoading && (
+          <div style={{ padding: "16px", fontSize: 12.5, color: T.ink, fontFamily: mono }}>Loading dividend history…</div>
+        )}
+        {!isLoading && sorted.length === 0 && (
+          <div style={{ padding: "16px", fontSize: 12.5, color: T.ink, fontFamily: mono }}>
+            {data?.error ? `Could not load dividend history: ${data.error}` : "No payments match these filters."}
+          </div>
+        )}
+        {isMobile ? (
+          <>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+              <select
+                value={sort.key}
+                onChange={(e) => clickSort(e.target.value as SortKey)}
+                style={{ fontFamily: "inherit", fontSize: 11, color: T.ink, background: "none", border: `1px solid ${T.line}`, borderRadius: 6, padding: "4px 6px" }}
+              >
+                {COLS.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    Sort: {c.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
+                style={{ fontFamily: "inherit", fontSize: 11, color: T.ink, background: "none", border: `1px solid ${T.line}`, borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}
+              >
+                {sort.dir === "asc" ? "▲ asc" : "▼ desc"}
+              </button>
+            </div>
+            {sorted.map((r) => (
+              <div key={r.id} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.line}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div>
+                    <div style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 14 }} title={r.name}>
+                      {r.source}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: r.portfolio === "capital" ? T.ledger : "#C09A5B" }}>
+                      {TYPE_LABEL[r.type]} · {r.portfolio === "capital" ? "976 Capital" : "Personal"}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: mono, fontSize: 12, color: T.ink, flexShrink: 0 }}>{r.date}</div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Gross</div>
+                    <div style={{ fontFamily: mono, fontSize: 12, color: r.grossCents > 0 ? T.gain : T.ink }}>{r.grossCents !== 0 ? usd(r.grossCents / 100) : "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Withholding</div>
+                    <div style={{ fontFamily: mono, fontSize: 12, color: r.withholdingCents < 0 ? T.loss : T.ink }}>{r.withholdingCents !== 0 ? usd(r.withholdingCents / 100) : "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Net</div>
+                    <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 500, color: r.grossCents + r.withholdingCents >= 0 ? T.gain : T.loss }}>
+                      {usd((r.grossCents + r.withholdingCents) / 100)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {sorted.length > 0 && (
+              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}` }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Total ({sorted.length})</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Gross</div>
+                    <div style={{ fontFamily: mono, fontSize: 12, color: T.gain }}>{usd(totalGross / 100)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Withholding</div>
+                    <div style={{ fontFamily: mono, fontSize: 12, color: totalWithholding < 0 ? T.loss : T.ink }}>{totalWithholding !== 0 ? usd(totalWithholding / 100) : "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Net</div>
+                    <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 500, color: totalNet >= 0 ? T.gain : T.loss }}>{usd(totalNet / 100)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
         <div style={{ overflowX: "auto" }}>
           <div style={{ minWidth: 760 }}>
             <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
@@ -216,15 +299,6 @@ export function DividendsSection() {
                 );
               })}
             </div>
-
-            {isLoading && (
-              <div style={{ padding: "16px", fontSize: 12.5, color: T.ink, fontFamily: mono }}>Loading dividend history…</div>
-            )}
-            {!isLoading && sorted.length === 0 && (
-              <div style={{ padding: "16px", fontSize: 12.5, color: T.ink, fontFamily: mono }}>
-                {data?.error ? `Could not load dividend history: ${data.error}` : "No payments match these filters."}
-              </div>
-            )}
 
             {sorted.map((r, i) => (
               <div
@@ -267,6 +341,7 @@ export function DividendsSection() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

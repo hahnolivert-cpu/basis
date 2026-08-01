@@ -9,6 +9,7 @@ import { TransactionsSection } from "@/components/TransactionsSection";
 import { DividendsSection } from "@/components/DividendsSection";
 import { formatTicker } from "@/lib/holdings";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import type { Holding, Portfolio } from "@/lib/types";
 
 type SortKey = "sym" | "cost" | "value" | "pct" | "yld" | "day" | "gain";
@@ -45,6 +46,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
   ];
   const [pf, setPf] = usePersistedState<"all" | Portfolio | "transactions" | "dividends">("holdings.pf", "all");
   const [sort, setSort] = useState<Sort>({ key: "value", dir: "desc" });
+  const isMobile = useIsMobile();
 
   // Cash consolidates into a single row regardless of symbol (Brex Treasury,
   // IBKR Cash, Chase checking, ...) — the ledger doesn't need per-account cash
@@ -136,20 +138,23 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginTop: 18, borderBottom: `1px solid ${T.line}` }}>
-        {TABS.map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setPf(id as "all" | Portfolio | "transactions" | "dividends")}
-            style={{
-              background: "none", border: "none", cursor: "pointer", padding: "8px 14px 12px", fontFamily: "inherit",
-              fontSize: 14, fontWeight: pf === id ? 600 : 400, color: pf === id ? T.ink : T.ink,
-              borderBottom: pf === id ? `2px solid ${T.ledger}` : "2px solid transparent", marginBottom: -1,
-            }}
-          >
-            {label}
-          </button>
-        ))}
+      <div style={{ display: "flex", gap: 8, marginTop: 18, borderBottom: `1px solid ${T.line}`, flexWrap: "wrap", rowGap: 6 }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
+          {TABS.map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setPf(id as "all" | Portfolio | "transactions" | "dividends")}
+              style={{
+                background: "none", border: "none", cursor: "pointer", padding: "8px 14px 12px", fontFamily: "inherit",
+                fontSize: 14, fontWeight: pf === id ? 600 : 400, color: pf === id ? T.ink : T.ink,
+                borderBottom: pf === id ? `2px solid ${T.ledger}` : "2px solid transparent", marginBottom: -1,
+                whiteSpace: "nowrap", flexShrink: 0,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         {pf !== "transactions" && pf !== "dividends" && (
           <div style={{ marginLeft: "auto", alignSelf: "center", fontFamily: mono, fontSize: 12.5, color: T.ink }}>{usd(total)}</div>
         )}
@@ -162,6 +167,115 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
       ) : (
         <>
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, marginTop: 18, overflow: "hidden" }}>
+        {isMobile ? (
+          <>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+              <select
+                value={sort.key}
+                onChange={(e) => clickSort(e.target.value as SortKey)}
+                style={{
+                  fontFamily: "inherit", fontSize: 11, color: T.ink, background: "none", border: `1px solid ${T.line}`,
+                  borderRadius: 6, padding: "4px 6px",
+                }}
+              >
+                {COLS.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    Sort: {c.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
+                style={{ fontFamily: "inherit", fontSize: 11, color: T.ink, background: "none", border: `1px solid ${T.line}`, borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}
+              >
+                {sort.dir === "asc" ? "▲ asc" : "▼ desc"}
+              </button>
+            </div>
+            {sorted.map((h) => {
+              const isCash = h.cls === "Cash";
+              const excluded = h.includedInNetWorth === false;
+              return (
+                <div key={h.sym} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.line}`, opacity: excluded ? 0.55 : 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ minWidth: 0, overflow: "hidden" }}>
+                      {isCash ? (
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>Cash</span>
+                      ) : (
+                        <>
+                          <div style={{ fontFamily: mono, fontWeight: 700, color: T.ledger, fontSize: 14 }}>
+                            {formatTicker(h.sym)}
+                            {h.sourceCount > 1 && (
+                              <span title={`Combined from ${h.sourceCount} accounts`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.ink }}>
+                                ×{h.sourceCount}
+                              </span>
+                            )}
+                            {excluded && (
+                              <span
+                                title="Not counted in net worth or any chart"
+                                style={{ marginLeft: 6, fontSize: 9, fontWeight: 400, color: T.ink, border: `1px solid ${T.line}`, borderRadius: 4, padding: "1px 5px" }}
+                              >
+                                excluded
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</div>
+                        </>
+                      )}
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontFamily: mono, fontWeight: 600, fontSize: 14 }}>{usd(h.value)}</div>
+                      <div style={{ fontSize: 10.5, color: T.ink, fontFamily: mono }}>{excluded ? "excluded" : `${h.pct.toFixed(1)}% of total`}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost</div>
+                      <div style={{ fontFamily: mono, fontSize: 12 }}>{isCash ? "—" : usd(h.cost)}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Yield</div>
+                      <div style={{ fontFamily: mono, fontSize: 12 }}>{h.yld > 0 ? h.yld.toFixed(2) + "%" : "—"}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Day</div>
+                      {h.day === 0 ? <div style={{ fontFamily: mono, fontSize: 12 }}>—</div> : <Delta pct={h.day} amt={h.dayAmt} size={12} weight={600} />}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total gain</div>
+                    {isCash ? <div style={{ fontFamily: mono, fontSize: 12 }}>—</div> : <Delta pct={h.gainPct} amt={h.gain} size={12} weight={600} />}
+                  </div>
+                </div>
+              );
+            })}
+            {sorted.length > 0 && (
+              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.ledger}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Total ({counted.length})</span>
+                  <span style={{ fontFamily: mono, fontWeight: 600, fontSize: 14 }}>{usd(total)}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost</div>
+                    <div style={{ fontFamily: mono, fontSize: 12 }}>{usd(totalCost)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Yield</div>
+                    <div style={{ fontFamily: mono, fontSize: 12 }}>{blendedYld > 0 ? blendedYld.toFixed(2) + "%" : "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Day</div>
+                    <Delta pct={totalDayPct} amt={totalDayAmt} size={12} weight={600} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total gain</div>
+                  <Delta pct={totalGainPct} amt={totalGain} size={12} weight={600} />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
         <div style={{ overflowX: "auto" }}>
         <div style={{ minWidth: 720 }}>
         <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
@@ -261,6 +375,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
         )}
         </div>
         </div>
+        )}
       </div>
 
           <ManualPositions holdings={holdings} />
