@@ -198,6 +198,31 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                   ))}
                 </div>
               </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 10 }}>
+                <span style={{ fontSize: 12.5, color: T.ink }}>Sort by</span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <select
+                    value={sort.key}
+                    onChange={(e) => clickSort(e.target.value as SortKey)}
+                    style={{
+                      fontFamily: "inherit", fontSize: 12, color: T.ink, background: "none", border: `1px solid ${T.line}`,
+                      borderRadius: 6, padding: "4px 6px",
+                    }}
+                  >
+                    {COLS.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }))}
+                    style={{ fontFamily: "inherit", fontSize: 12, color: T.ink, background: "none", border: `1px solid ${T.line}`, borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}
+                  >
+                    {sort.dir === "asc" ? "▲" : "▼"}
+                  </button>
+                </div>
+              </div>
             </div>
             {sorted.map((h) => {
               const isCash = h.cls === "Cash";
@@ -220,9 +245,20 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                     }}
                   >
                     <div style={{ minWidth: 0, overflow: "hidden" }}>
-                      <span style={{ fontWeight: 600, fontSize: 14.5, display: "inline-flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                        {isCash ? "Cash" : h.name}
-                        {h.sourceCount > 1 && <span style={{ fontSize: 11, fontWeight: 400, color: T.inkSoft }}>×{h.sourceCount}</span>}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 14.5 }}>
+                          {isCash ? "Cash" : formatTicker(h.sym)}
+                        </span>
+                        <span
+                          aria-hidden
+                          style={{
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            width: 18, height: 18, borderRadius: "50%", background: "#F4F7F5", color: T.inkSoft, fontSize: 9,
+                            transform: expanded ? "rotate(180deg)" : "none", transition: "transform 150ms ease",
+                          }}
+                        >
+                          ▾
+                        </span>
                         {excluded && (
                           <span
                             title="Not counted in net worth or any chart"
