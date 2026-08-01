@@ -1,4 +1,4 @@
-export type AssetClass = "Cash" | "Equities" | "Crypto";
+export type AssetClass = "Cash" | "Equities" | "Crypto" | "Angel Investment";
 export type Portfolio = "capital" | "personal";
 
 export type Holding = {

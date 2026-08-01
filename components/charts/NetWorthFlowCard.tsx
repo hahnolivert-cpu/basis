@@ -14,6 +14,7 @@ const BUCKET_COLOR: Record<string, string> = {
   ETFs: "#C6788A",
   Crypto: "#E3C567",
   "401k": "#8AA6C2",
+  "Angel Investment": "#7A9B76",
 };
 
 // Buckets a holding the same way the Holdings table's Class column does

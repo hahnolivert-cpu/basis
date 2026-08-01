@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   const costBasis = Number(body.costBasis ?? 0);
   const hasExplicitValue = body.value !== undefined && body.value !== null && body.value !== "";
   const explicitValue = hasExplicitValue ? Number(body.value) : null;
-  const assetClass = ["Cash", "Equities", "Crypto"].includes(String(body.assetClass)) ? String(body.assetClass) : "Crypto";
+  const assetClass = ["Cash", "Equities", "Crypto", "Angel Investment"].includes(String(body.assetClass)) ? String(body.assetClass) : "Crypto";
 
   if (!symbol) return jsonNoStore({ error: "symbol is required" }, { status: 400 });
   if (!Number.isFinite(qty) || qty <= 0) return jsonNoStore({ error: "qty must be a positive number" }, { status: 400 });

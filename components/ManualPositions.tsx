@@ -202,6 +202,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
               <option value="Crypto">Crypto</option>
               <option value="Equities">Equities</option>
               <option value="Cash">Cash</option>
+              <option value="Angel Investment">Angel Investment</option>
             </select>
           </div>
           <button

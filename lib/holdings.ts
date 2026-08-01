@@ -36,7 +36,9 @@ export const CRYPTO_BASES: Record<string, string> = {
 export type QuoteRef = { type: "crypto"; id: string } | { type: "equity"; symbol: string } | null;
 
 export function quoteRefFor(symbol: string, assetClass: string): QuoteRef {
-  if (assetClass === "Cash") return null;
+  // Neither has a live market quote to reprice from — Cash by definition,
+  // and an angel/private position by definition has no public listing.
+  if (assetClass === "Cash" || assetClass === "Angel Investment") return null;
 
   // Option contracts trade in units of 100 underlying shares, but a live
   // per-share quote (Yahoo resolves OCC symbols directly) applied through
@@ -140,7 +142,7 @@ export type DbHolding = Holding & {
 const FUND_ALIASES: Record<string, string> = { VFIAX: "VOO" };
 
 function mapRow(r: Row): DbHolding {
-  const cls = (["Cash", "Equities", "Crypto"].includes(r.asset_class) ? r.asset_class : "Equities") as AssetClass;
+  const cls = (["Cash", "Equities", "Crypto", "Angel Investment"].includes(r.asset_class) ? r.asset_class : "Equities") as AssetClass;
   const etfKey = FUND_ALIASES[r.symbol] ?? r.symbol;
   // An option's classification comes from its underlying, not its OCC code.
   const classKey = underlyingSymbol(r.symbol);
