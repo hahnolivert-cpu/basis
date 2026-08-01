@@ -133,7 +133,7 @@ export function NetWorthTab({
               ["Personal", personal, "#C09A5B"],
             ] as [string, number, string][]
           ).map(([n, v, c]) => (
-            <div key={n} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5 }}>
+            <div key={n} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: c }} />{n}
               </span>
@@ -142,12 +142,12 @@ export function NetWorthTab({
           ))}
           {liabilities.length > 0 &&
             liabilities.map((l) => (
-              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 12, color: T.ink }}>
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 12, color: T.ink }}>
                 <span>{l.name}</span>
                 <span style={{ fontFamily: mono, color: T.loss }}>−{usd(l.amount_cents / 100).slice(1)}</span>
               </div>
             ))}
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", fontSize: 13.5, color: T.loss, fontWeight: liabilities.length > 1 ? 600 : 400 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13.5, color: T.loss, fontWeight: liabilities.length > 1 ? 600 : 400 }}>
             <span>Debts</span><span style={{ fontFamily: mono }}>−{usd(debts).slice(1)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0 0", fontSize: 14, fontWeight: 600 }}>
@@ -158,16 +158,16 @@ export function NetWorthTab({
         {/* Estimated income */}
         <Card style={{ flex: 1, minWidth: "min(280px, 100%)" }}>
           <Eyebrow>Est. dividends &amp; interest</Eyebrow>
-          <div style={{ fontFamily: serif, fontSize: 34, fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.ink, fontFamily: "inherit" }}> / yr</span></div>
+          <div style={{ fontFamily: serif, fontSize: "clamp(24px, 6.5vw, 34px)", fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.ink, fontFamily: "inherit" }}> / yr</span></div>
           <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {usd(income / 12)} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
           {incomeRows.slice(0, 10).map((h) => (
-            <div key={h.sym + h.acct} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 0", borderBottom: `1px solid ${T.line}` }}>
+            <div key={h.sym + h.acct} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "8px 0", borderBottom: `1px solid ${T.line}` }}>
               <span>{h.sym} <span style={{ color: T.ink, fontFamily: mono, fontSize: 11 }}>{h.yld.toFixed(2)}%</span></span>
               <span style={{ fontFamily: mono }}>{usd(h.inc)}</span>
             </div>
           ))}
           {incomeRows.length > 10 && (
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 0", color: T.ink }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "8px 0", color: T.ink }}>
               <span>+ {incomeRows.length - 10} more</span>
               <span style={{ fontFamily: mono }}>{usd(incomeRows.slice(10).reduce((s, h) => s + h.inc, 0))}</span>
             </div>
@@ -304,7 +304,7 @@ export function NetWorthTab({
             drilldownRows.map((p, i) => (
               <div
                 key={`${p.sym}-${p.via ?? ""}-${i}`}
-                style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}
+                style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}
               >
                 <span>
                   <span style={{ fontWeight: 600 }}>{p.sym}</span>

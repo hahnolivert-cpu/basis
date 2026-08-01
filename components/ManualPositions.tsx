@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useRef, type FormEvent } from "react";
 import { useSWRConfig } from "swr";
 import { T, mono, serif } from "@/lib/theme";
 import { usd } from "@/lib/format";
@@ -45,6 +45,15 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // A real click can fire the handler more than once before React re-renders
+  // with `disabled` set (the `busy` state guard only takes effect a tick
+  // later) — observed as a single click on a toggle sending several PATCHes
+  // back to back. With live-priced assets also revalidating in the
+  // background, those overlapping requests can resolve out of order and
+  // leave the UI on stale state. This ref is checked and set synchronously,
+  // so a re-entrant call within the same tick is rejected outright rather
+  // than racing on `busy`.
+  const inFlight = useRef(false);
 
   // Sorted, not just filtered — the API has no explicit ORDER BY, so an
   // unsorted list can silently reorder between requests (e.g. right after a
@@ -57,6 +66,8 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setNote(null);
     try {
@@ -87,10 +98,13 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
       setFailed(true);
       setNote(err instanceof Error ? err.message : String(err));
     }
+    inFlight.current = false;
     setBusy(false);
   };
 
   const toggleIncluded = async (sym: string, included: boolean) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setNote(null);
     try {
@@ -107,10 +121,13 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
       setFailed(true);
       setNote(err instanceof Error ? err.message : String(err));
     }
+    inFlight.current = false;
     setBusy(false);
   };
 
   const remove = async (sym: string) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setNote(null);
     try {
@@ -123,6 +140,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
       setFailed(true);
       setNote(err instanceof Error ? err.message : String(err));
     }
+    inFlight.current = false;
     setBusy(false);
   };
 
@@ -218,27 +236,29 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
         </form>
       )}
 
-      {note && (
-        <div style={{ marginTop: 12, fontSize: 12, fontFamily: mono, color: failed ? T.loss : T.gain }}>{note}</div>
-      )}
+      {/* Reserved regardless of whether a note is showing — otherwise the
+          list below shifts down the instant one appears (right after the
+          user's own click), so their next click lands on a row that's no
+          longer where they saw it. */}
+      <div style={{ marginTop: 12, minHeight: 17, fontSize: 12, fontFamily: mono, color: failed ? T.loss : T.gain }}>{note ?? ""}</div>
 
       {manual.length > 0 && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 4 }}>
           {manual.map((h) => (
             <div
               key={h.sym}
               style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap",
-                padding: "8px 0", borderTop: `1px solid ${T.line}`, fontSize: 13,
+                minHeight: 40, padding: "8px 0", borderTop: `1px solid ${T.line}`, fontSize: 13,
               }}
             >
-              <span>
+              <span style={{ minWidth: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", flex: "1 1 auto" }}>
                 <span style={{ fontWeight: 600 }}>{h.sym}</span>
                 <span style={{ color: T.ink, fontSize: 11.5, marginLeft: 8 }}>
                   {h.name} · {h.acct}
                 </span>
               </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap", flexShrink: 0 }}>
                 <span style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{h.qty}</span>
                 <span style={{ fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</span>
                 <Toggle

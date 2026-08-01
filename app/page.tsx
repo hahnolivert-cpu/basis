@@ -111,7 +111,7 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
             <div>
               <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
-              <div style={{ fontFamily: serif, fontWeight: 600, fontSize: 54, lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
+              <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(34px, 9vw, 54px)", lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
               <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>{usd(total)} assets − {usd(debts)} debts</div>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap" }}>
