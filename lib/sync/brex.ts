@@ -1,5 +1,18 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { fetchBrexAccounts, fetchBrexCardBalanceCents, fetchBrexTransactions, type BrexAccount, type BrexTxn } from "@/lib/brex";
+import {
+  fetchBrexAccounts,
+  fetchBrexCardBalanceCents,
+  fetchBrexCardTransactions,
+  fetchBrexTransactions,
+  type BrexAccount,
+  type BrexTxn,
+} from "@/lib/brex";
+import { mccToCategory } from "@/lib/spending";
+
+// Every Brex card charge is inherently a 976 Capital expense — it's the
+// company card — so unlike a personal Capital One charge, it never needs the
+// manual "mark as reimbursed" step: reimbursed_by is set at sync time.
+const BREX_REIMBURSED_BY = "976";
 
 // Brex sync, callable in-process like the IBKR one. Each Brex cash account
 // becomes one Cash holding under the single Brex account row.
@@ -175,6 +188,22 @@ export async function runBrexSync({ dryRun = false }: { dryRun?: boolean } = {})
   const txns = fetched.flatMap((f) => f.transactions);
   const skippedInternal = fetched.reduce((s, f) => s + f.skippedInternal, 0);
   const cardBalanceCents = await fetchBrexCardBalanceCents(token).catch(() => 0);
+  // Rolling window of the most recent card charges (500, newest-first) —
+  // plenty to catch everything since the last sync without re-fetching the
+  // full card history on every "Sync now" click. scripts/backfill-brex-
+  // spend.ts does the one-time deep pull.
+  const cardTxns = await fetchBrexCardTransactions(token, { pages: 5 }).catch(() => []);
+  const cardSpendRows = cardTxns.map((t) => ({
+    source: "brex",
+    card_last4: "Brex",
+    transaction_date: t.date,
+    posted_date: t.date,
+    description: t.description,
+    category: mccToCategory(t.mcc),
+    amount_cents: t.amountCents,
+    reimbursed_by: BREX_REIMBURSED_BY,
+    external_id: t.externalId,
+  }));
 
   const supabase = createServiceClient();
   const plan = await buildPlan(supabase, accounts, txns, cardBalanceCents);
@@ -183,14 +212,22 @@ export async function runBrexSync({ dryRun = false }: { dryRun?: boolean } = {})
       `${skippedInternal} internal checking<->Treasury transfer(s) skipped — both legs are the same money, so recording them would double-count`
     );
   }
-  if (dryRun) return summariseBrexPlan(plan);
+  if (dryRun) return { ...summariseBrexPlan(plan), cardSpendFetched: cardSpendRows.length };
 
   // An empty account list would otherwise wipe every Brex holding.
   if (plan.upserts.length === 0) {
     throw new Error("Brex returned no active accounts — refusing to write, as that would delete every Brex holding");
   }
 
-  const applied = { balances: 0, deleted: 0, transactions: 0, liabilities: 0 };
+  const applied = { balances: 0, deleted: 0, transactions: 0, liabilities: 0, "card spend": 0 };
+
+  if (cardSpendRows.length) {
+    const { error: cardSpendErr } = await supabase
+      .from("card_spend")
+      .upsert(cardSpendRows, { onConflict: "external_id" });
+    if (cardSpendErr) throw new Error(`Brex card spend upsert failed: ${cardSpendErr.message}`);
+    applied["card spend"] = cardSpendRows.length;
+  }
 
   const { error: upsertErr } = await supabase.from("holdings").upsert(plan.upserts, { onConflict: "account_id,symbol" });
   if (upsertErr) throw new Error(`Brex holdings upsert failed: ${upsertErr.message}`);

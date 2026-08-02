@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
 import { T, mono } from "@/lib/theme";
 import { usd, usdK } from "@/lib/format";
 import { monthLabel } from "@/lib/weekly";
 import { Card, Eyebrow } from "@/components/ui";
+import { MonthDrilldownModal } from "@/components/MonthDrilldown";
 import { useIncome } from "@/lib/hooks/useIncome";
 import type { IncomeTransaction } from "@/app/api/dividend-income/route";
 
@@ -26,7 +27,7 @@ export function IncomeHistoryCard() {
       .map(([month, cents]) => ({ month, label: monthLabel(`${month}-01`), net: cents / 100 }));
   }, [rows]);
 
-  const openMonth = (month: string) => window.open(`/month?months=${month}&category=income`, "_blank");
+  const [openedMonth, setOpenedMonth] = useState<string | null>(null);
 
   return (
     <Card style={{ flex: 1, minWidth: "min(320px, 100%)" }}>
@@ -55,11 +56,14 @@ export function IncomeHistoryCard() {
                 fill={T.gain}
                 radius={[3, 3, 0, 0]}
                 cursor="pointer"
-                onClick={(d) => openMonth((d as unknown as { month: string }).month)}
+                onClick={(d) => setOpenedMonth((d as unknown as { month: string }).month)}
               />
             </BarChart>
           </ResponsiveContainer>
         </div>
+      )}
+      {openedMonth && (
+        <MonthDrilldownModal target={{ category: "income", months: [openedMonth] }} onClose={() => setOpenedMonth(null)} />
       )}
     </Card>
   );

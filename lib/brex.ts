@@ -92,6 +92,67 @@ type RawTxn = {
   type?: string;
 };
 
+export type BrexCardTxn = {
+  externalId: string;
+  date: string; // YYYY-MM-DD
+  description: string;
+  amountCents: number; // positive = purchase, negative = refund/chargeback
+  mcc: string | null;
+};
+
+type RawCardTxn = {
+  id: string;
+  description?: string;
+  amount?: { amount?: number; currency?: string };
+  initiated_at_date?: string;
+  posted_at_date?: string;
+  type?: string; // PURCHASE | REFUND | CHARGEBACK | COLLECTION
+  merchant?: { raw_descriptor?: string; mcc?: string };
+};
+
+// "COLLECTION" is Brex debiting the linked bank account to pay down the card
+// balance — a transfer, not spend (mirrors excluding Capital One's
+// "Payment/Credit" rows). PURCHASE/REFUND/CHARGEBACK amounts already come
+// back correctly signed (positive spend, negative credit).
+const NON_SPEND_CARD_TXN_TYPES = new Set(["COLLECTION"]);
+
+// Card transactions are a distinct feed from cash account transactions
+// (`fetchBrexTransactions` above) — this is actual card purchases/refunds,
+// with per-merchant MCC codes, not interest/internal transfers.
+export async function fetchBrexCardTransactions(
+  token: string,
+  { pages = 5, limit = 100 }: { pages?: number; limit?: number } = {}
+): Promise<BrexCardTxn[]> {
+  const out: BrexCardTxn[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < pages; page++) {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (cursor) qs.set("cursor", cursor);
+    const json = await brexGet<{ items?: RawCardTxn[]; next_cursor?: string | null }>(
+      `/v2/transactions/card/primary?${qs}`,
+      token
+    );
+
+    for (const t of json.items ?? []) {
+      const date = (t.posted_at_date ?? t.initiated_at_date ?? "").slice(0, 10);
+      if (!t.id || !date || !t.type || NON_SPEND_CARD_TXN_TYPES.has(t.type)) continue;
+      out.push({
+        externalId: `brex:card:${t.id}`,
+        date,
+        description: t.description || t.merchant?.raw_descriptor || "Brex card transaction",
+        amountCents: Math.round(t.amount?.amount ?? 0),
+        mcc: t.merchant?.mcc ?? null,
+      });
+    }
+
+    if (!json.next_cursor) break;
+    cursor = json.next_cursor;
+  }
+
+  return out;
+}
+
 export async function fetchBrexTransactions(
   token: string,
   accountId: string,

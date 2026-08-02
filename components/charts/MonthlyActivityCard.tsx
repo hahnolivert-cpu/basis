@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ComposedChart, Bar, Line, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis, Legend, ReferenceLine } from "recharts";
 import { T, mono } from "@/lib/theme";
 import { usd, usdK } from "@/lib/format";
 import { monthLabel } from "@/lib/weekly";
 import { Card, Eyebrow } from "@/components/ui";
+import { MonthDrilldownModal } from "@/components/MonthDrilldown";
 import { useMonthlyFlows } from "@/lib/hooks/useMonthlyFlows";
 import type { MonthlyFlow } from "@/app/api/monthly-flows/route";
 
@@ -27,7 +28,7 @@ export function MonthlyActivityCard() {
     [months]
   );
 
-  const openMonth = (month: string) => window.open(`/month?months=${month}&category=activity`, "_blank");
+  const [openedMonth, setOpenedMonth] = useState<string | null>(null);
 
   return (
     <Card style={{ flex: 1, minWidth: "min(320px, 100%)" }}>
@@ -63,7 +64,7 @@ export function MonthlyActivityCard() {
                 fill={T.gain}
                 radius={[3, 3, 0, 0]}
                 cursor="pointer"
-                onClick={(d) => openMonth((d as unknown as { month: string }).month)}
+                onClick={(d) => setOpenedMonth((d as unknown as { month: string }).month)}
               />
               <Bar
                 dataKey="sold"
@@ -72,12 +73,15 @@ export function MonthlyActivityCard() {
                 fill={T.loss}
                 radius={[0, 0, 3, 3]}
                 cursor="pointer"
-                onClick={(d) => openMonth((d as unknown as { month: string }).month)}
+                onClick={(d) => setOpenedMonth((d as unknown as { month: string }).month)}
               />
               <Line type="monotone" dataKey="net" name="Net invested" stroke={T.ink} strokeWidth={2} dot={{ r: 3, fill: T.ink }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+      )}
+      {openedMonth && (
+        <MonthDrilldownModal target={{ category: "activity", months: [openedMonth] }} onClose={() => setOpenedMonth(null)} />
       )}
     </Card>
   );

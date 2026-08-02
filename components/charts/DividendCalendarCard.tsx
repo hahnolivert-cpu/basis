@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { T, mono } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { Card, Eyebrow } from "@/components/ui";
+import { MonthDrilldownModal } from "@/components/MonthDrilldown";
 import { useIncome } from "@/lib/hooks/useIncome";
 import { useDividendSchedule } from "@/lib/hooks/useDividendSchedule";
 import { projectExpectedDividends } from "@/lib/expectedDividends";
@@ -29,7 +30,7 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
   const projection = useMemo(() => projectExpectedDividends(holdings, rows, schedule), [holdings, rows, schedule]);
   const hasAny = projection.some((m) => m.totalCents > 0);
 
-  const openMonth = (i: number) => window.open(`/month?category=expected&month=${i}`, "_blank");
+  const [openedMonth, setOpenedMonth] = useState<number | null>(null);
 
   return (
     <Card style={{ flex: 1, minWidth: "min(320px, 100%)" }}>
@@ -44,7 +45,7 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
           {MONTHS.map((m, i) => (
             <div
               key={m}
-              onClick={() => projection[i].totalCents > 0 && openMonth(i)}
+              onClick={() => projection[i].totalCents > 0 && setOpenedMonth(i)}
               style={{
                 border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px",
                 background: projection[i].totalCents > 0 ? T.tint : T.card,
@@ -58,6 +59,9 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
             </div>
           ))}
         </div>
+      )}
+      {openedMonth !== null && (
+        <MonthDrilldownModal target={{ category: "expected", monthIndex: openedMonth }} onClose={() => setOpenedMonth(null)} />
       )}
     </Card>
   );
