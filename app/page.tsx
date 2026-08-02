@@ -65,15 +65,20 @@ export default function Home() {
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "34px 24px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, paddingBottom: 14, borderBottom: `1px solid ${T.line}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", rowGap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "nowrap", minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
               <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
               <div style={{ fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", color: T.gain, fontWeight: 600 }}>
                 Ascentic
               </div>
             </div>
-            <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>
+            {/* minWidth: 0 is load-bearing — without it a flex item won't
+                shrink below its content's natural width, so on a narrow
+                screen the tabs would rather push the header wider than
+                the viewport (or wrap to a second line) than actually use
+                this div's own overflowX:auto to scroll. */}
+            <div style={{ display: "flex", gap: 2, overflowX: "auto", minWidth: 0 }}>
               {TABS.map(([id, label]) => (
                 <button
                   key={id}
