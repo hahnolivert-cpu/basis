@@ -6,6 +6,7 @@ import { T, mono, serif } from "@/lib/theme";
 import { usd } from "@/lib/format";
 import { Card, Eyebrow, Toggle } from "@/components/ui";
 import { fetcher } from "@/lib/hooks/fetcher";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import type { Holding } from "@/lib/types";
 
 // Matched on institution, not is_manual: seeded provider estimates also carry
@@ -55,6 +56,7 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
   // so a re-entrant call within the same tick is rejected outright rather
   // than racing on `busy`.
   const inFlight = useRef(false);
+  const isMobile = useIsMobile();
 
   // Sorted, not just filtered — the API has no explicit ORDER BY, so an
   // unsorted list can silently reorder between requests (e.g. right after a
@@ -257,43 +259,84 @@ export function ManualPositions({ holdings }: { holdings: ManualHolding[] }) {
 
       {manual.length > 0 && (
         <div style={{ marginTop: 4 }}>
-          {manual.map((h) => (
-            <div
-              key={h.sym}
-              style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap",
-                minHeight: 40, padding: "8px 0", borderTop: `1px solid ${T.line}`, fontSize: 13,
-              }}
-            >
-              <span style={{ minWidth: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", flex: "1 1 auto" }}>
-                <span style={{ fontWeight: 600 }}>{h.sym}</span>
-                <span style={{ color: T.ink, fontSize: 11.5, marginLeft: 8 }}>
-                  {h.name} · {h.acct}
+          {manual.map((h) =>
+            isMobile ? (
+              // Qty/value/Toggle/Remove all sharing one line with the name
+              // never fit a phone width — the full-size Toggle pill plus
+              // Remove button ran off the right edge instead of wrapping.
+              // Stacked rows with a smaller Toggle keep everything on-screen.
+              <div key={h.sym} style={{ padding: "10px 0", borderTop: `1px solid ${T.line}`, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{h.sym}</div>
+                    <div style={{ color: T.inkSoft, fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {h.name} · {h.acct}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontFamily: mono, fontSize: 11.5, color: T.inkSoft }}>{h.qty}</div>
+                    <div style={{ fontFamily: mono, fontWeight: 600, fontSize: 13 }}>{usd(h.value)}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 8 }}>
+                  <Toggle
+                    on={h.includedInNetWorth}
+                    setOn={(v) => toggleIncluded(h.sym, v)}
+                    label={h.includedInNetWorth ? "In net worth" : "Excluded"}
+                    disabled={busy}
+                    size="sm"
+                  />
+                  <button
+                    onClick={() => remove(h.sym)}
+                    disabled={busy}
+                    title={`Remove ${h.sym}`}
+                    style={{
+                      cursor: busy ? "wait" : "pointer", background: "none", border: `1px solid ${T.line}`,
+                      borderRadius: 6, padding: "3px 9px", fontFamily: "inherit", fontSize: 11, color: T.loss, flexShrink: 0,
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                key={h.sym}
+                style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap",
+                  minHeight: 40, padding: "8px 0", borderTop: `1px solid ${T.line}`, fontSize: 13,
+                }}
+              >
+                <span style={{ minWidth: 0, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", flex: "1 1 auto" }}>
+                  <span style={{ fontWeight: 600 }}>{h.sym}</span>
+                  <span style={{ color: T.ink, fontSize: 11.5, marginLeft: 8 }}>
+                    {h.name} · {h.acct}
+                  </span>
                 </span>
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap", flexShrink: 0 }}>
-                <span style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{h.qty}</span>
-                <span style={{ fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</span>
-                <Toggle
-                  on={h.includedInNetWorth}
-                  setOn={(v) => toggleIncluded(h.sym, v)}
-                  label={h.includedInNetWorth ? "In net worth" : "Excluded"}
-                  disabled={busy}
-                />
-                <button
-                  onClick={() => remove(h.sym)}
-                  disabled={busy}
-                  title={`Remove ${h.sym}`}
-                  style={{
-                    cursor: busy ? "wait" : "pointer", background: "none", border: `1px solid ${T.line}`,
-                    borderRadius: 6, padding: "3px 9px", fontFamily: "inherit", fontSize: 11, color: T.loss,
-                  }}
-                >
-                  Remove
-                </button>
-              </span>
-            </div>
-          ))}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 14, flexWrap: "wrap", flexShrink: 0 }}>
+                  <span style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>{h.qty}</span>
+                  <span style={{ fontFamily: mono, fontWeight: 500 }}>{usd(h.value)}</span>
+                  <Toggle
+                    on={h.includedInNetWorth}
+                    setOn={(v) => toggleIncluded(h.sym, v)}
+                    label={h.includedInNetWorth ? "In net worth" : "Excluded"}
+                    disabled={busy}
+                  />
+                  <button
+                    onClick={() => remove(h.sym)}
+                    disabled={busy}
+                    title={`Remove ${h.sym}`}
+                    style={{
+                      cursor: busy ? "wait" : "pointer", background: "none", border: `1px solid ${T.line}`,
+                      borderRadius: 6, padding: "3px 9px", fontFamily: "inherit", fontSize: 11, color: T.loss,
+                    }}
+                  >
+                    Remove
+                  </button>
+                </span>
+              </div>
+            )
+          )}
         </div>
       )}
 

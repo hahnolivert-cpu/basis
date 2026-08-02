@@ -20,13 +20,13 @@ const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "equities", label: "Equities", align: "right" },
   { key: "cash", label: "Cash", align: "right" },
   { key: "total", label: "Total", align: "right" },
-  { key: "totalInclStrala", label: "$ Value incl. Strala", align: "right" },
   { key: "wowAmt", label: "WoW $", align: "right" },
   { key: "wowPct", label: "WoW %", align: "right" },
   { key: "eur", label: "EUR", align: "right" },
   { key: "btc", label: "BTC", align: "right" },
+  { key: "totalInclStrala", label: "$ Value incl. Strala", align: "right" },
 ];
-const GRID = "1.25fr 1fr 1fr 1fr 1.1fr 1.3fr 1.05fr 0.85fr 1fr 0.8fr";
+const GRID = "1.25fr 1fr 1fr 1fr 1.1fr 1.05fr 0.85fr 1fr 0.8fr 1.3fr";
 
 function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?: number }) {
   const [sort, setSort] = useState<Sort>({ key: "date", dir: "desc" });
@@ -103,7 +103,6 @@ function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?:
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.equities)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.cash)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500, fontSize: 12.5 }}>{usd(r.total)}</div>
-              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.totalInclStrala)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: r.wowAmt === null ? T.ink : r.wowAmt >= 0 ? T.gain : T.loss }}>
                 {r.wowAmt === null ? "—" : sign(r.wowAmt, usd(r.wowAmt))}
               </div>
@@ -112,6 +111,7 @@ function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?:
               </div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>€{fmt(r.eur)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>₿{r.btc.toFixed(2)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.totalInclStrala)}</div>
             </div>
           ))}
         </div>
