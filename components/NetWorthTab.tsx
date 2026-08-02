@@ -20,6 +20,7 @@ import { DividendCalendarCard } from "@/components/charts/DividendCalendarCard";
 import { MonthlyActivityCard } from "@/components/charts/MonthlyActivityCard";
 import { useIncome } from "@/lib/hooks/useIncome";
 import { useDividendSchedule } from "@/lib/hooks/useDividendSchedule";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { projectExpectedDividends } from "@/lib/expectedDividends";
 import type { Holding } from "@/lib/types";
 import type { Liability } from "@/app/api/liabilities/route";
@@ -39,6 +40,9 @@ export function NetWorthTab({
   lookThrough: boolean;
   setLookThrough: (v: boolean) => void;
 }) {
+  const isMobile = useIsMobile();
+  const toggleSize = isMobile ? "sm" : "md";
+
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const capital = holdings.filter((h) => h.pf === "capital").reduce((s, h) => s + h.value, 0);
   const personal = total - capital;
@@ -217,7 +221,7 @@ export function NetWorthTab({
       {/* Composition */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 30, marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
         <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600 }}>Composition</div>
-        <Toggle on={lookThrough} setOn={setLookThrough} label="Look through ETFs" />
+        <Toggle on={lookThrough} setOn={setLookThrough} label="Look through ETFs" size={toggleSize} />
       </div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <CompositionCard
@@ -228,8 +232,8 @@ export function NetWorthTab({
           onSegmentClick={openDrilldown("Asset class", "class")}
           headerRight={
             <div style={{ display: "flex", gap: 6 }}>
-              <Toggle on={classIncludeCrypto} setOn={setClassIncludeCrypto} label="Crypto" />
-              <Toggle on={classIncludeCash} setOn={setClassIncludeCash} label="Cash" />
+              <Toggle on={classIncludeCrypto} setOn={setClassIncludeCrypto} label="Crypto" size={toggleSize} />
+              <Toggle on={classIncludeCash} setOn={setClassIncludeCash} label="Cash" size={toggleSize} />
             </div>
           }
         />
@@ -240,8 +244,8 @@ export function NetWorthTab({
           onSegmentClick={openDrilldown("Sector", "sector")}
           headerRight={
             <div style={{ display: "flex", gap: 6 }}>
-              <Toggle on={sectorIncludeCrypto} setOn={setSectorIncludeCrypto} label="Crypto" />
-              <Toggle on={sectorIncludeCash} setOn={setSectorIncludeCash} label="Cash" />
+              <Toggle on={sectorIncludeCrypto} setOn={setSectorIncludeCrypto} label="Crypto" size={toggleSize} />
+              <Toggle on={sectorIncludeCash} setOn={setSectorIncludeCash} label="Cash" size={toggleSize} />
             </div>
           }
         />
@@ -253,8 +257,8 @@ export function NetWorthTab({
           onSegmentClick={openDrilldown("Geography", "geo")}
           headerRight={
             <div style={{ display: "flex", gap: 6 }}>
-              <Toggle on={geoIncludeCrypto} setOn={setGeoIncludeCrypto} label="Crypto" />
-              <Toggle on={geoIncludeCash} setOn={setGeoIncludeCash} label="Cash" />
+              <Toggle on={geoIncludeCrypto} setOn={setGeoIncludeCrypto} label="Crypto" size={toggleSize} />
+              <Toggle on={geoIncludeCash} setOn={setGeoIncludeCash} label="Cash" size={toggleSize} />
             </div>
           }
         />
@@ -268,8 +272,8 @@ export function NetWorthTab({
         total={concTotal}
         headerRight={
           <div style={{ display: "flex", gap: 6 }}>
-            <Toggle on={concIncludeCrypto} setOn={setConcIncludeCrypto} label="Crypto" />
-            <Toggle on={concIncludeCash} setOn={setConcIncludeCash} label="Cash" />
+            <Toggle on={concIncludeCrypto} setOn={setConcIncludeCrypto} label="Crypto" size={toggleSize} />
+            <Toggle on={concIncludeCash} setOn={setConcIncludeCash} label="Cash" size={toggleSize} />
           </div>
         }
       />

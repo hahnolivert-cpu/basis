@@ -77,21 +77,44 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   );
 }
 
-export function Toggle({ on, setOn, label, disabled }: { on: boolean; setOn: (v: boolean) => void; label: string; disabled?: boolean }) {
+const TOGGLE_SIZES = {
+  md: { padding: "7px 14px", gap: 9, fontSize: 13, trackW: 26, trackH: 14, knob: 10, inset: 2 },
+  sm: { padding: "4px 9px", gap: 6, fontSize: 11, trackW: 20, trackH: 11, knob: 7, inset: 2 },
+};
+
+export function Toggle({
+  on,
+  setOn,
+  label,
+  disabled,
+  size = "md",
+}: {
+  on: boolean;
+  setOn: (v: boolean) => void;
+  label: string;
+  disabled?: boolean;
+  size?: "sm" | "md";
+}) {
+  const s = TOGGLE_SIZES[size];
   return (
     <button
       onClick={() => !disabled && setOn(!on)}
       disabled={disabled}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 9, cursor: disabled ? "wait" : "pointer",
+        display: "inline-flex", alignItems: "center", gap: s.gap, cursor: disabled ? "wait" : "pointer",
         background: on ? T.gain : T.card, color: on ? "#fff" : T.ink,
         border: `1px solid ${on ? T.gain : T.line}`, borderRadius: 999,
-        padding: "7px 14px", fontFamily: "inherit", fontSize: 13, fontWeight: 500, transition: "all 160ms ease",
+        padding: s.padding, fontFamily: "inherit", fontSize: s.fontSize, fontWeight: 500, transition: "all 160ms ease",
         opacity: disabled ? 0.6 : 1,
       }}
     >
-      <span style={{ width: 26, height: 14, borderRadius: 999, background: on ? "#ffffff44" : T.line, position: "relative", display: "inline-block" }}>
-        <span style={{ position: "absolute", top: 2, left: on ? 14 : 2, width: 10, height: 10, borderRadius: "50%", background: on ? "#fff" : T.inkSoft, transition: "left 160ms ease" }} />
+      <span style={{ width: s.trackW, height: s.trackH, borderRadius: 999, background: on ? "#ffffff44" : T.line, position: "relative", display: "inline-block", flexShrink: 0 }}>
+        <span
+          style={{
+            position: "absolute", top: (s.trackH - s.knob) / 2, left: on ? s.trackW - s.knob - s.inset : s.inset,
+            width: s.knob, height: s.knob, borderRadius: "50%", background: on ? "#fff" : T.inkSoft, transition: "left 160ms ease",
+          }}
+        />
       </span>
       {label}
     </button>
