@@ -98,24 +98,13 @@ export default function Home() {
               ))}
             </div>
           );
-          // The status text shrinks and truncates before it ever pushes the
-          // Account button (flexShrink: 0, so it's always fully visible and
-          // clickable) off the edge of the screen.
-          const accountControls = (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-              <span
-                style={{
-                  fontSize: 12, color: T.inkSoft, fontFamily: mono, whiteSpace: "nowrap",
-                  overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flexShrink: 1,
-                }}
-              >
-                {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
-              </span>
-              <div style={{ flexShrink: 0 }}>
-                <AccountMenu onSignOut={handleSignOut} />
-              </div>
-            </div>
-          );
+          // The data-freshness status now lives inside the Account menu
+          // instead of sitting in the header, so this row is just the one
+          // button — nothing left to overflow.
+          const statusText = quotes
+            ? `Live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+            : "Screenshot data · Jul 28";
+          const accountControls = <AccountMenu statusText={statusText} onSignOut={handleSignOut} />;
 
           // On mobile, the tabs get their own full-width row below the logo
           // — sharing a row with both the logo and the account controls left
@@ -139,63 +128,33 @@ export default function Home() {
           );
         })()}
 
+        {/* One fluid layout instead of a hard mobile/desktop split — clamp()
+            scales the numbers smoothly with viewport width, and flex-wrap
+            lets the stat grid drop below the net worth figure on its own
+            when there isn't room, rather than a fixed breakpoint jump. */}
         <Card style={{ marginTop: 22 }}>
-          {isMobile ? (
-            <>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: "16px 24px" }}>
+            <div>
               <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
-              <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(28px, 9vw, 38px)", lineHeight: 1, letterSpacing: "-0.01em" }}>
+              <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(26px, 7vw, 40px)", lineHeight: 1, letterSpacing: "-0.01em" }}>
                 {usd(startNW)}
               </div>
-              <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>
-                {usd(total)} assets − {usd(debts)} debts
-              </div>
-              <div
-                style={{
-                  display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10,
-                  marginTop: 18, paddingTop: 16, borderTop: `1px solid ${T.line}`,
-                }}
-              >
-                <div>
-                  <Eyebrow style={{ marginBottom: 6 }}>Daily</Eyebrow>
-                  <Delta pct={dayPct} amt={dayAmt} size={13} stacked />
-                </div>
-                <div>
-                  <Eyebrow style={{ marginBottom: 6 }}>All Time</Eyebrow>
-                  <Delta pct={gainPct} amt={gainAmt} size={13} stacked />
-                </div>
-                <div>
-                  <Eyebrow style={{ marginBottom: 6 }}>IRR</Eyebrow>
-                  <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 24 }}>
-              <div>
-                <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
-                <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(28px, 4.5vw, 40px)", lineHeight: 1, letterSpacing: "-0.01em" }}>
-                  {usd(startNW)}
-                </div>
-                <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>
-                  {usd(total)} assets − {usd(debts)} debts
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 32 }}>
-                <div>
-                  <Eyebrow style={{ marginBottom: 6 }}>Daily</Eyebrow>
-                  <Delta pct={dayPct} amt={dayAmt} size={15} />
-                </div>
-                <div>
-                  <Eyebrow style={{ marginBottom: 6 }}>All Time</Eyebrow>
-                  <Delta pct={gainPct} amt={gainAmt} size={15} />
-                </div>
-                <div>
-                  <Eyebrow style={{ marginBottom: 6 }}>IRR</Eyebrow>
-                  <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 15 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
-                </div>
+            </div>
+            {/* Equal-width columns (not organically sized to each label's
+                content) so all three values start at the same point instead
+                of drifting left/right depending on how wide "Daily" vs
+                "All Time" happen to render. */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(70px, 1fr))", columnGap: 20, rowGap: 6, flex: "0 1 320px" }}>
+              <Eyebrow style={{ marginBottom: 0 }}>Daily</Eyebrow>
+              <Eyebrow style={{ marginBottom: 0 }}>All Time</Eyebrow>
+              <Eyebrow style={{ marginBottom: 0 }}>IRR</Eyebrow>
+              <Delta pct={dayPct} amt={dayAmt} size="clamp(12px, 2.4vw, 15px)" />
+              <Delta pct={gainPct} amt={gainAmt} size="clamp(12px, 2.4vw, 15px)" />
+              <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: "clamp(12px, 2.4vw, 15px)" }}>
+                {sign(irr, irr.toFixed(1))}%/yr
               </div>
             </div>
-          )}
+          </div>
         </Card>
 
         {tab === "networth" && (

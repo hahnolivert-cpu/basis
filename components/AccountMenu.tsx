@@ -14,8 +14,10 @@ const itemStyle: React.CSSProperties = {
 // pills in the header — fine on a wide screen, but they wrapped to a second
 // row anywhere narrower. Folding them into one menu keeps the header a
 // single row at every width, at the cost of an extra click to reach any one
-// of them.
-export function AccountMenu({ onSignOut }: { onSignOut: () => void }) {
+// of them. The data-freshness line ("live · as of...") used to sit next to
+// these in the header too — moved in here since it's informational, not
+// something that needs to be visible at a glance.
+export function AccountMenu({ statusText, onSignOut }: { statusText: string; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -47,6 +49,9 @@ export function AccountMenu({ onSignOut }: { onSignOut: () => void }) {
             minWidth: 190, overflow: "hidden", zIndex: 20,
           }}
         >
+          <div style={{ padding: "10px 14px", fontSize: 11.5, color: T.inkSoft, fontFamily: mono, borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" }}>
+            {statusText}
+          </div>
           <a href="/link" style={itemStyle} onClick={() => setOpen(false)}>
             + Connect an account
           </a>

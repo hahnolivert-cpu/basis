@@ -8,7 +8,7 @@ import { sign, usd } from "@/lib/format";
 // the column, so a table of these ends up with rows misaligned against each
 // other for no visible reason. Opt-in rather than the default so it only
 // changes layouts that ask for it.
-export function Delta({ pct, amt, size = 13, weight, stacked }: { pct: number; amt: number; size?: number; weight?: number; stacked?: boolean }) {
+export function Delta({ pct, amt, size = 13, weight, stacked }: { pct: number; amt: number; size?: number | string; weight?: number; stacked?: boolean }) {
   const color = pct >= 0 ? T.gain : T.loss;
   if (stacked) {
     return (
