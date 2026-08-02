@@ -34,6 +34,10 @@ export type TransactionRow = {
   priceCents: number;
   totalCents: number;
   isRecurring: boolean;
+  // Only set for sells — see realizedGains(). Null means there wasn't enough
+  // tracked buy history to know this sale's cost basis, not that the gain is
+  // zero.
+  realizedGainCents: number | null;
 };
 
 function classify(symbol: string, byHolding: Map<string, HoldingRow>): { name: string; assetClass: string; isEtf: boolean } {
@@ -41,6 +45,60 @@ function classify(symbol: string, byHolding: Map<string, HoldingRow>): { name: s
   if (known) return { name: known.name, assetClass: known.asset_class, isEtf: looksLikeFund(symbol, known.name) };
   const base = symbol.split(/[.\-/]/)[0].trim().toUpperCase();
   return { name: symbol, assetClass: base in CRYPTO_BASES ? "Crypto" : "Equities", isEtf: looksLikeFund(symbol, symbol) };
+}
+
+type PricedTrade = TradeRow & { symbol: string; qty: number; price_cents: number };
+
+// Realized gain/loss per sell, by average cost basis — this app doesn't track
+// individual lots (no per-purchase lot IDs from any provider), so it can't do
+// real FIFO/specific-lot accounting. Instead, each symbol's trades are walked
+// oldest-first (merged across every account, same as holdings already merge
+// by symbol elsewhere), keeping a running (qty, total cost); a sell's gain is
+// its proceeds minus qty × that running average cost per share, and the
+// position's cost shrinks proportionally afterward. A sell for more than the
+// tracked qty (its cost basis predates this symbol's synced history, or the
+// 730-day transaction lookback) has no reliable basis to compare against, so
+// it — and the untracked position after it — reports null rather than a
+// number that quietly assumes a $0 cost basis.
+function realizedGains(trades: PricedTrade[]): Map<string, number | null> {
+  const bySymbol = new Map<string, PricedTrade[]>();
+  for (const t of trades) {
+    const arr = bySymbol.get(t.symbol) ?? [];
+    arr.push(t);
+    bySymbol.set(t.symbol, arr);
+  }
+
+  const result = new Map<string, number | null>();
+  for (const symTrades of Array.from(bySymbol.values())) {
+    const ordered = [...symTrades].sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      // Same-day ties: buys before sells, so a same-day round trip still has
+      // a cost basis to sell against — the DB only carries date, not time.
+      if (a.type !== b.type) return a.type === "buy" ? -1 : 1;
+      return 0;
+    });
+
+    let qty = 0;
+    let costCents = 0;
+    for (const t of ordered) {
+      if (t.type === "buy") {
+        qty += t.qty;
+        costCents += t.qty * t.price_cents;
+        continue;
+      }
+      if (qty <= 1e-9 || qty + 1e-6 < t.qty) {
+        result.set(t.id, null);
+        qty = 0;
+        costCents = 0;
+        continue;
+      }
+      const costOfSold = (costCents / qty) * t.qty;
+      result.set(t.id, Math.round(t.qty * t.price_cents - costOfSold));
+      costCents -= costOfSold;
+      qty -= t.qty;
+    }
+  }
+  return result;
 }
 
 // A symbol reads as "recurring" when it has at least 3 buys landing at a
@@ -80,8 +138,9 @@ export async function GET() {
     if (tradesErr) throw new Error(tradesErr.message);
     if (holdingsErr) throw new Error(holdingsErr.message);
 
-    const trades = (tradesRaw ?? []).filter((t): t is TradeRow & { symbol: string; qty: number; price_cents: number } => Boolean(t.symbol && t.qty && t.price_cents));
+    const trades = (tradesRaw ?? []).filter((t): t is PricedTrade => Boolean(t.symbol && t.qty && t.price_cents));
     const byHolding = new Map((holdingsRaw ?? []).map((h) => [h.symbol, h]));
+    const gains = realizedGains(trades);
 
     // Recurring-cadence detection only looks at buys — a recurring sell
     // schedule isn't a thing Plaid/IBKR expose or this app tracks, and mixing
@@ -114,6 +173,7 @@ export async function GET() {
         priceCents: t.price_cents,
         totalCents: Math.abs(t.amount_cents),
         isRecurring: recurringSymbols.has(t.symbol),
+        realizedGainCents: t.type === "sell" ? gains.get(t.id) ?? null : null,
       };
     });
 

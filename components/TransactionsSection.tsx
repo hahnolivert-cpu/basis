@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { T, mono, serif } from "@/lib/theme";
-import { usd } from "@/lib/format";
+import { usd, sign } from "@/lib/format";
 import { Card, Eyebrow, Delta } from "@/components/ui";
 import { formatTicker } from "@/lib/holdings";
 import { mergeBySym } from "@/lib/calc";
@@ -32,7 +32,7 @@ const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "currentPrice", label: "Current price", align: "right" },
   { key: "totalBuy", label: "Total", align: "right" },
   { key: "totalCurrent", label: "Total current", align: "right" },
-  { key: "gainPct", label: "Gain since buy", align: "right" },
+  { key: "gainPct", label: "Gain", align: "right" },
 ];
 const GRID = "0.9fr 0.55fr 0.7fr 0.8fr 0.75fr 0.7fr 0.9fr 0.9fr 1fr 1.05fr 1.25fr";
 
@@ -76,6 +76,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
   const [tradeType, setTradeType] = usePersistedState<TradeTypeFilter>("tx.tradeType", "all");
   const [sort, setSort] = usePersistedState<Sort>("tx.sort", { key: "date", dir: "desc" });
   const isMobile = useIsMobile();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Current price per symbol from the live-repriced holdings the rest of the
   // dashboard already has — avoids a second round-trip to the quote APIs
@@ -88,19 +89,27 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
     return map;
   }, [holdings]);
 
-  // "Gain since buy" only means something for a buy row held against its
-  // original cost — a sell has already realized its outcome, and comparing
-  // its proceeds to the current price of whatever's left of that symbol
-  // would just be a different, misleading number, so sells skip enrichment.
+  // A buy's gain is unrealized — proceeds if sold at today's price, vs its
+  // own cost. A sell has already realized its outcome, so it shows the
+  // realized gain/loss from the API's average-cost-basis calculation
+  // instead (null when there wasn't enough tracked buy history to know that
+  // sale's cost basis) — comparing its proceeds to the current price of
+  // whatever's left of that symbol would just be a different, misleading
+  // number.
   const enriched = useMemo<Row[]>(
     () =>
       raw.map((t) => {
-        if (t.type !== "buy") return { ...t, currentPrice: null, currentValueCents: null, gainCents: null, gainPct: null };
-        const currentPrice = priceBySymbol.get(t.symbol) ?? null;
-        const currentValueCents = currentPrice !== null ? Math.round(currentPrice * t.qty * 100) : null;
-        const gainCents = currentValueCents !== null ? currentValueCents - t.totalCents : null;
-        const gainPct = currentValueCents !== null && t.totalCents > 0 ? (gainCents! / t.totalCents) * 100 : null;
-        return { ...t, currentPrice, currentValueCents, gainCents, gainPct };
+        if (t.type === "buy") {
+          const currentPrice = priceBySymbol.get(t.symbol) ?? null;
+          const currentValueCents = currentPrice !== null ? Math.round(currentPrice * t.qty * 100) : null;
+          const gainCents = currentValueCents !== null ? currentValueCents - t.totalCents : null;
+          const gainPct = currentValueCents !== null && t.totalCents > 0 ? (gainCents! / t.totalCents) * 100 : null;
+          return { ...t, currentPrice, currentValueCents, gainCents, gainPct };
+        }
+        const gainCents = t.realizedGainCents;
+        const costBasisCents = gainCents !== null ? t.totalCents - gainCents : null;
+        const gainPct = gainCents !== null && costBasisCents !== null && costBasisCents > 0 ? (gainCents / costBasisCents) * 100 : null;
+        return { ...t, currentPrice: null, currentValueCents: null, gainCents, gainPct };
       }),
     [raw, priceBySymbol]
   );
@@ -232,54 +241,96 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 {sort.dir === "asc" ? "▲ asc" : "▼ desc"}
               </button>
             </div>
-            {sorted.map((t) => (
-              <div key={t.id} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.line}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <TradeBadge type={t.type} />
-                      <div style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 14 }} title={t.name}>
-                        {formatTicker(t.symbol)}
+            {sorted.map((t) => {
+              const expanded = expandedId === t.id;
+              return (
+                <div key={t.id}>
+                  <div
+                    onClick={() => setExpandedId(expanded ? null : t.id)}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10,
+                      padding: "13px 14px", borderBottom: expanded ? "none" : `1px solid ${T.line}`, cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <TradeBadge type={t.type} />
+                        <span style={{ fontFamily: mono, fontWeight: 700, color: T.gain, fontSize: 14.5 }}>{formatTicker(t.symbol)}</span>
+                        <span
+                          aria-hidden
+                          style={{
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            width: 18, height: 18, borderRadius: "50%", background: "#F4F7F5", color: T.inkSoft, fontSize: 9,
+                            transform: expanded ? "rotate(180deg)" : "none", transition: "transform 150ms ease",
+                          }}
+                        >
+                          ▾
+                        </span>
+                      </span>
+                      <div style={{ fontSize: 11.5, color: t.portfolio === "capital" ? T.gain : T.inkSoft, marginTop: 2 }}>
+                        {t.portfolio === "capital" ? "976 Capital" : "Personal"} · {t.date}
                       </div>
                     </div>
-                    <div style={{ fontSize: 11.5, color: t.portfolio === "capital" ? T.gain : T.ink }}>
-                      {t.portfolio === "capital" ? "976 Capital" : "Personal"} · {t.isRecurring ? "Recurring" : "One-off"}
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontFamily: mono, fontWeight: 600, fontSize: 14.5 }}>{usd(t.totalCents / 100)}</div>
+                      <div style={{ fontSize: 11.5, fontFamily: mono, marginTop: 2, color: t.gainPct === null ? T.inkSoft : t.gainPct >= 0 ? T.gain : T.loss }}>
+                        {t.gainPct === null ? "—" : `${sign(t.gainCents! / 100, usd(t.gainCents! / 100))} · ${sign(t.gainPct, t.gainPct.toFixed(2))}%`}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ fontFamily: mono, fontSize: 12, color: T.ink, flexShrink: 0 }}>{t.date}</div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Qty</div>
-                    <div style={{ fontFamily: mono, fontSize: 12 }}>{t.qty.toLocaleString("en-US", { maximumFractionDigits: 4 })}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Price</div>
-                    <div style={{ fontFamily: mono, fontSize: 12 }}>{usd(t.priceCents / 100, 2)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Current price</div>
-                    <div style={{ fontFamily: mono, fontSize: 12 }}>{t.currentPrice !== null ? usd(t.currentPrice, 2) : "—"}</div>
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total</div>
-                    <div style={{ fontFamily: mono, fontSize: 12, fontWeight: 500 }}>{usd(t.totalCents / 100)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Total current</div>
-                    <div style={{ fontFamily: mono, fontSize: 12 }}>
-                      {t.currentValueCents !== null ? usd(t.currentValueCents / 100) : t.type === "sell" ? "—" : "closed"}
+                  {expanded && (
+                    <div style={{ padding: "0 14px 14px", borderBottom: `1px solid ${T.line}`, background: "#FAFCFA" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Qty</div>
+                          <div style={{ fontFamily: mono, fontSize: 12, marginTop: 2 }}>{t.qty.toLocaleString("en-US", { maximumFractionDigits: 4 })}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Price</div>
+                          <div style={{ fontFamily: mono, fontSize: 12, marginTop: 2 }}>{usd(t.priceCents / 100, 2)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                            {t.type === "buy" ? "Current price" : "Recurring"}
+                          </div>
+                          <div style={{ fontFamily: mono, fontSize: 12, marginTop: 2 }}>
+                            {t.type === "buy" ? (t.currentPrice !== null ? usd(t.currentPrice, 2) : "—") : t.isRecurring ? "Yes" : "No"}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                            {t.type === "buy" ? "Total current" : "Cost basis sold"}
+                          </div>
+                          <div style={{ fontFamily: mono, fontSize: 12, marginTop: 2 }}>
+                            {t.type === "buy"
+                              ? t.currentValueCents !== null
+                                ? usd(t.currentValueCents / 100)
+                                : "closed"
+                              : t.gainCents !== null
+                                ? usd((t.totalCents - t.gainCents) / 100)
+                                : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                            {t.type === "buy" ? "Gain" : "Realized gain"}
+                          </div>
+                          <div style={{ marginTop: 2 }}>
+                            {t.gainPct !== null ? (
+                              <Delta pct={t.gainPct} amt={t.gainCents! / 100} size={12} weight={600} />
+                            ) : (
+                              <span style={{ fontFamily: mono, fontSize: 12, color: T.inkSoft }}>—</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Gain since buy</div>
-                  {t.gainPct !== null ? <Delta pct={t.gainPct} amt={t.gainCents! / 100} size={12} weight={600} /> : <span style={{ fontFamily: mono, fontSize: 12, color: T.ink }}>—</span>}
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {sorted.length > 0 && (
               <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -296,7 +347,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                   </div>
                 </div>
                 <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Gain since buy</div>
+                  <div style={{ fontSize: 9, color: T.ink, textTransform: "uppercase", letterSpacing: "0.06em" }}>Unrealized gain (buys)</div>
                   <Delta pct={totalGainPct} amt={totalGainCents / 100} size={12} weight={600} />
                 </div>
               </div>
@@ -371,7 +422,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                 <div />
                 <div style={{ textAlign: "right", fontFamily: mono }} title="Buys only — sell proceeds aren't cost basis">{usd(totalCostCents / 100)}</div>
                 <div style={{ textAlign: "right", fontFamily: mono }}>{usd(totalCurrentCents / 100)}</div>
-                <div style={{ textAlign: "right" }}>
+                <div style={{ textAlign: "right" }} title="Unrealized gain on buys only — realized gains from sells aren't summed here">
                   <Delta pct={totalGainPct} amt={totalGainCents / 100} size={12} weight={600} />
                 </div>
               </div>

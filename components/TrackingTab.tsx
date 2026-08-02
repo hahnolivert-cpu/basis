@@ -11,7 +11,7 @@ import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard
 import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
 import type { Holding } from "@/lib/types";
 
-type SortKey = "date" | "crypto" | "equities" | "cash" | "total" | "wowAmt" | "wowPct" | "eur" | "btc";
+type SortKey = "date" | "crypto" | "equities" | "cash" | "total" | "totalInclStrala" | "wowAmt" | "wowPct" | "eur" | "btc";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 
 const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
@@ -20,18 +20,24 @@ const COLS: { key: SortKey; label: string; align: "left" | "right" }[] = [
   { key: "equities", label: "Equities", align: "right" },
   { key: "cash", label: "Cash", align: "right" },
   { key: "total", label: "Total", align: "right" },
+  { key: "totalInclStrala", label: "$ Value incl. Strala", align: "right" },
   { key: "wowAmt", label: "WoW $", align: "right" },
   { key: "wowPct", label: "WoW %", align: "right" },
   { key: "eur", label: "EUR", align: "right" },
   { key: "btc", label: "BTC", align: "right" },
 ];
-const GRID = "1.25fr 1fr 1fr 1fr 1.1fr 1.05fr 0.85fr 1fr 0.8fr";
+const GRID = "1.25fr 1fr 1fr 1fr 1.1fr 1.3fr 1.05fr 0.85fr 1fr 0.8fr";
 
-function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
+function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?: number }) {
   const [sort, setSort] = useState<Sort>({ key: "date", dir: "desc" });
 
+  // totalInclStrala isn't part of the stored weekly series (see TrackingTab
+  // for why) — it's derived live from today's Strala value, same figure on
+  // every row, folded in here just so the column can sort like any other.
+  const withStrala = useMemo(() => rows.map((r) => ({ ...r, totalInclStrala: r.total + angelValue })), [rows, angelValue]);
+
   const sorted = useMemo(() => {
-    const arr = [...rows];
+    const arr = [...withStrala];
     const { key, dir } = sort;
     arr.sort((a, b) => {
       const av = a[key], bv = b[key];
@@ -42,7 +48,7 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
       return dir === "asc" ? cmp : -cmp;
     });
     return arr;
-  }, [rows, sort]);
+  }, [withStrala, sort]);
 
   const clickSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
@@ -97,6 +103,7 @@ function WeeklyTable({ rows }: { rows: WeeklyRow[] }) {
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.equities)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.cash)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontWeight: 500, fontSize: 12.5 }}>{usd(r.total)}</div>
+              <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: T.ink }}>{usd(r.totalInclStrala)}</div>
               <div style={{ textAlign: "right", fontFamily: mono, fontSize: 12, color: r.wowAmt === null ? T.ink : r.wowAmt >= 0 ? T.gain : T.loss }}>
                 {r.wowAmt === null ? "—" : sign(r.wowAmt, usd(r.wowAmt))}
               </div>
@@ -161,7 +168,7 @@ export function TrackingTab({ holdings = [] }: { holdings?: Holding[] }) {
         {rows.length} weeks · {rows.length - autoCount} imported, {autoCount} recorded automatically. EUR and BTC totals
         use each week&apos;s own historical rate.
       </div>
-      <WeeklyTable rows={rows} />
+      <WeeklyTable rows={rows} angelValue={angelValue} />
     </div>
   );
 }

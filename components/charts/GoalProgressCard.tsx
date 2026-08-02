@@ -23,7 +23,7 @@ export function GoalProgressCard({ rows, angelValue = 0 }: { rows: WeeklyRow[]; 
           const weeks = achieved ? null : weeksToGoal(rows, goal - angelValue);
           return (
             <div key={goal}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12.5, marginBottom: 5 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", rowGap: 2, columnGap: 10, fontSize: 12.5, marginBottom: 5 }}>
                 <span style={{ fontWeight: 600, fontFamily: serif, fontSize: 15 }}>{usdK(goal)}</span>
                 <span style={{ fontFamily: mono, color: achieved ? T.gain : T.ink }}>
                   {achieved ? (
