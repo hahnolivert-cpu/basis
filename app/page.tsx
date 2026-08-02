@@ -18,6 +18,7 @@ import { useQuotes } from "@/lib/hooks/useQuotes";
 import { useEnrichedHoldings } from "@/lib/hooks/useEnrichedHoldings";
 import { useLiabilities } from "@/lib/hooks/useLiabilities";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
 const TABS: [string, string][] = [
   ["networth", "Dashboard"],
@@ -31,6 +32,7 @@ export default function Home() {
   const router = useRouter();
   const [tab, setTab] = usePersistedState("app.tab", "networth");
   const [lookThrough, setLookThrough] = useState(true);
+  const isMobile = useIsMobile();
   const { data: quotes } = useQuotes();
   const { holdings } = useEnrichedHoldings();
   const { data: liabilityData } = useLiabilities();
@@ -64,8 +66,8 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "34px 24px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, paddingBottom: 14, borderBottom: `1px solid ${T.line}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "nowrap", minWidth: 0 }}>
+        {(() => {
+          const logo = (
             <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- fixed local asset, not worth next/image's overhead for a 22px header mark */}
               <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
@@ -73,11 +75,12 @@ export default function Home() {
                 Ascentic
               </div>
             </div>
-            {/* minWidth: 0 is load-bearing — without it a flex item won't
-                shrink below its content's natural width, so on a narrow
-                screen the tabs would rather push the header wider than
-                the viewport (or wrap to a second line) than actually use
-                this div's own overflowX:auto to scroll. */}
+          );
+          // minWidth: 0 is load-bearing — without it a flex item won't
+          // shrink below its content's natural width, so on a narrow screen
+          // the tabs would rather overflow the viewport (or wrap to a
+          // second line) than actually use this div's own overflowX:auto.
+          const tabs = (
             <div style={{ display: "flex", gap: 2, overflowX: "auto", minWidth: 0 }}>
               {TABS.map(([id, label]) => (
                 <button
@@ -94,34 +97,106 @@ export default function Home() {
                 </button>
               ))}
             </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "nowrap" }}>
-            <span style={{ fontSize: 12, color: T.inkSoft, fontFamily: mono, whiteSpace: "nowrap" }}>
-              {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
-            </span>
-            <AccountMenu onSignOut={handleSignOut} />
-          </div>
-        </div>
+          );
+          // The status text shrinks and truncates before it ever pushes the
+          // Account button (flexShrink: 0, so it's always fully visible and
+          // clickable) off the edge of the screen.
+          const accountControls = (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              <span
+                style={{
+                  fontSize: 12, color: T.inkSoft, fontFamily: mono, whiteSpace: "nowrap",
+                  overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flexShrink: 1,
+                }}
+              >
+                {quotes ? `live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "screenshot data · Jul 28"}
+              </span>
+              <div style={{ flexShrink: 0 }}>
+                <AccountMenu onSignOut={handleSignOut} />
+              </div>
+            </div>
+          );
 
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 22 }}>
-          <Card style={{ flex: 2, minWidth: 260 }}>
-            <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
-            <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(22px, 4.5vw, 28px)", lineHeight: 1, letterSpacing: "-0.01em" }}>{usd(startNW)}</div>
-            <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>{usd(total)} assets − {usd(debts)} debts</div>
-          </Card>
-          <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
-            <Eyebrow style={{ marginBottom: 6 }}>Daily</Eyebrow>
-            <Delta pct={dayPct} amt={dayAmt} size={13} />
-          </Card>
-          <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
-            <Eyebrow style={{ marginBottom: 6 }}>All Time</Eyebrow>
-            <Delta pct={gainPct} amt={gainAmt} size={13} />
-          </Card>
-          <Card style={{ flex: 1, minWidth: 160, textAlign: "right" }}>
-            <Eyebrow style={{ marginBottom: 6 }}>IRR</Eyebrow>
-            <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
-          </Card>
-        </div>
+          // On mobile, the tabs get their own full-width row below the logo
+          // — sharing a row with both the logo and the account controls left
+          // them too cramped to be worth scrolling through.
+          return isMobile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 14, borderBottom: `1px solid ${T.line}` }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                {logo}
+                {accountControls}
+              </div>
+              {tabs}
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, paddingBottom: 14, borderBottom: `1px solid ${T.line}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "nowrap", minWidth: 0 }}>
+                {logo}
+                {tabs}
+              </div>
+              {accountControls}
+            </div>
+          );
+        })()}
+
+        <Card style={{ marginTop: 22 }}>
+          {isMobile ? (
+            <>
+              <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
+              <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(28px, 9vw, 38px)", lineHeight: 1, letterSpacing: "-0.01em" }}>
+                {usd(startNW)}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>
+                {usd(total)} assets − {usd(debts)} debts
+              </div>
+              <div
+                style={{
+                  display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10,
+                  marginTop: 18, paddingTop: 16, borderTop: `1px solid ${T.line}`,
+                }}
+              >
+                <div>
+                  <Eyebrow style={{ marginBottom: 6 }}>Daily</Eyebrow>
+                  <Delta pct={dayPct} amt={dayAmt} size={13} stacked />
+                </div>
+                <div>
+                  <Eyebrow style={{ marginBottom: 6 }}>All Time</Eyebrow>
+                  <Delta pct={gainPct} amt={gainAmt} size={13} stacked />
+                </div>
+                <div>
+                  <Eyebrow style={{ marginBottom: 6 }}>IRR</Eyebrow>
+                  <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 13 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 24 }}>
+              <div>
+                <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
+                <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(28px, 4.5vw, 40px)", lineHeight: 1, letterSpacing: "-0.01em" }}>
+                  {usd(startNW)}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 13, color: T.inkSoft, fontFamily: mono }}>
+                  {usd(total)} assets − {usd(debts)} debts
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 32 }}>
+                <div>
+                  <Eyebrow style={{ marginBottom: 6 }}>Daily</Eyebrow>
+                  <Delta pct={dayPct} amt={dayAmt} size={15} />
+                </div>
+                <div>
+                  <Eyebrow style={{ marginBottom: 6 }}>All Time</Eyebrow>
+                  <Delta pct={gainPct} amt={gainAmt} size={15} />
+                </div>
+                <div>
+                  <Eyebrow style={{ marginBottom: 6 }}>IRR</Eyebrow>
+                  <div style={{ color: irr >= 0 ? T.gain : T.loss, fontFamily: mono, fontSize: 15 }}>{sign(irr, irr.toFixed(1))}%/yr</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
 
         {tab === "networth" && (
           <NetWorthTab
