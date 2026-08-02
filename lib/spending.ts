@@ -192,6 +192,64 @@ export function monthKey(date: string): string {
   return date.slice(0, 7); // YYYY-MM
 }
 
+export type DateRangePreset = "all" | "this_month" | "last_month" | "last_3_months" | "last_6_months" | "ytd" | "last_12_months" | "custom";
+
+export const DATE_RANGE_PRESETS: { value: DateRangePreset; label: string }[] = [
+  { value: "all", label: "All time" },
+  { value: "this_month", label: "This month" },
+  { value: "last_month", label: "Last month" },
+  { value: "last_3_months", label: "Last 3 months" },
+  { value: "last_6_months", label: "Last 6 months" },
+  { value: "ytd", label: "Year to date" },
+  { value: "last_12_months", label: "Last 12 months" },
+  { value: "custom", label: "Custom range" },
+];
+
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Bounds are inclusive YYYY-MM-DD strings, comparable directly against
+// SpendRow.date (which is already that shape) without parsing — null means
+// unbounded on that side.
+export function dateRangeBounds(preset: DateRangePreset, customFrom?: string, customTo?: string): { from: string | null; to: string | null } {
+  const now = new Date();
+  const startOfMonth = (offset: number) => new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const endOfMonth = (offset: number) => new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+  switch (preset) {
+    case "this_month":
+      return { from: ymd(startOfMonth(0)), to: ymd(endOfMonth(0)) };
+    case "last_month":
+      return { from: ymd(startOfMonth(-1)), to: ymd(endOfMonth(-1)) };
+    case "last_3_months":
+      return { from: ymd(startOfMonth(-2)), to: ymd(endOfMonth(0)) };
+    case "last_6_months":
+      return { from: ymd(startOfMonth(-5)), to: ymd(endOfMonth(0)) };
+    case "last_12_months":
+      return { from: ymd(startOfMonth(-11)), to: ymd(endOfMonth(0)) };
+    case "ytd":
+      return { from: `${now.getFullYear()}-01-01`, to: ymd(endOfMonth(0)) };
+    case "custom":
+      return { from: customFrom || null, to: customTo || null };
+    case "all":
+    default:
+      return { from: null, to: null };
+  }
+}
+
+export function filterByDateRange(rows: SpendRow[], from: string | null, to: string | null): SpendRow[] {
+  if (!from && !to) return rows;
+  return rows.filter((r) => (!from || r.date >= from) && (!to || r.date <= to));
+}
+
+export function dateRangeLabel(preset: DateRangePreset, from: string | null, to: string | null): string {
+  if (preset !== "custom") return DATE_RANGE_PRESETS.find((p) => p.value === preset)?.label ?? "All time";
+  if (from && to) return `${from} – ${to}`;
+  if (from) return `Since ${from}`;
+  if (to) return `Through ${to}`;
+  return "Custom range";
+}
+
 // Personal spend excludes anything reimbursed via Brex (that's 976's
 // expense, not personal) and never includes refunds/credits pulling the
 // total negative in a single-month view — a big refund just nets down

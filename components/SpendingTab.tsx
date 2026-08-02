@@ -11,6 +11,7 @@ import { CompositionCard } from "@/components/charts/CompositionCard";
 import { useSpending } from "@/lib/hooks/useSpending";
 import { fetcher } from "@/lib/hooks/fetcher";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { usePersistedState } from "@/lib/hooks/usePersistedState";
 import {
   personalRows,
   reimbursedRows,
@@ -19,7 +20,12 @@ import {
   detectRecurring,
   monthKey,
   BUSINESS_EXPENSE_CATEGORIES,
+  DATE_RANGE_PRESETS,
+  dateRangeBounds,
+  filterByDateRange,
+  dateRangeLabel,
   type SpendRow,
+  type DateRangePreset,
 } from "@/lib/spending";
 
 const REIMBURSED_BY = "976";
@@ -108,18 +114,30 @@ export function SpendingTab() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openedMonth, setOpenedMonth] = useState<string | null>(null);
   const [categoryDrilldown, setCategoryDrilldown] = useState<{ title: string; source: "personal" | "976" | "all"; names: string[] } | null>(null);
+  const [rangePreset, setRangePreset] = usePersistedState<DateRangePreset>("spending.range", "all");
+  const [customFrom, setCustomFrom] = usePersistedState("spending.range.from", "");
+  const [customTo, setCustomTo] = usePersistedState("spending.range.to", "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const personal = useMemo(() => personalRows(rows), [rows]);
-  const reimbursed = useMemo(() => reimbursedRows(rows), [rows]);
+  // Every stat, chart, and drilldown below reads from rangeRows, not the raw
+  // rows fetched from the API — the date filter is the single source of
+  // truth the whole tab adjusts to.
+  const { from: rangeFrom, to: rangeTo } = useMemo(
+    () => dateRangeBounds(rangePreset, customFrom, customTo),
+    [rangePreset, customFrom, customTo]
+  );
+  const rangeRows = useMemo(() => filterByDateRange(rows, rangeFrom, rangeTo), [rows, rangeFrom, rangeTo]);
+
+  const personal = useMemo(() => personalRows(rangeRows), [rangeRows]);
+  const reimbursed = useMemo(() => reimbursedRows(rangeRows), [rangeRows]);
   const cards = useMemo(() => {
     const map = new Map<string, { key: string; label: string }>();
-    for (const r of rows) {
+    for (const r of rangeRows) {
       const key = cardKey(r);
       if (!map.has(key)) map.set(key, { key, label: cardLabel(r) });
     }
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }, [rows]);
+  }, [rangeRows]);
 
   const monthly = useMemo(() => {
     const p = byMonth(personal);
@@ -142,57 +160,51 @@ export function SpendingTab() {
   // dining, travel, and other spend that isn't itself a business expense
   // just because it happened to run through 976.
   const businessExpenses = useMemo(() => {
-    const all = byCategory(rows);
+    const all = byCategory(rangeRows);
     return BUSINESS_EXPENSE_CATEGORIES.map((name) => ({ name, value: all.find((c) => c.name === name)?.value ?? 0 }));
-  }, [rows]);
+  }, [rangeRows]);
   const businessExpenseTotal = businessExpenses.reduce((s, c) => s + c.value, 0);
   // Same merchant can be charged from either a personal card or the Brex
   // card (or both, at different times) — a subscription is a subscription
   // regardless of which one paid it, so this runs across every source.
-  const recurring = useMemo(() => detectRecurring(rows), [rows]);
+  const recurring = useMemo(() => detectRecurring(rangeRows), [rangeRows]);
 
   // Each card's own total (not just its personal share) — otherwise the
   // Brex chip would always read $0, since every Brex row is reimbursed by
   // definition and drops out of `personal`.
   const cardTotals = useMemo(() => {
     const map = new Map<string, number>();
-    for (const r of rows) {
+    for (const r of rangeRows) {
       if (r.amountCents <= 0) continue;
       const key = cardKey(r);
       map.set(key, (map.get(key) ?? 0) + r.amountCents / 100);
     }
     return map;
-  }, [rows]);
+  }, [rangeRows]);
 
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, "0")}`;
-  const thisMonthTotal = personal.filter((r) => monthKey(r.date) === thisMonth).reduce((s, r) => s + r.amountCents / 100, 0);
-  const lastMonthTotal = personal.filter((r) => monthKey(r.date) === lastMonth).reduce((s, r) => s + r.amountCents / 100, 0);
-  const ytdTotal = personal
-    .filter((r) => r.date.startsWith(String(now.getFullYear())))
-    .reduce((s, r) => s + r.amountCents / 100, 0);
-  const reimbursedYtd = reimbursed
-    .filter((r) => r.date.startsWith(String(now.getFullYear())))
-    .reduce((s, r) => s + r.amountCents / 100, 0);
+  // Totals for the selected range, not a fixed "this month"/"YTD" — the
+  // whole point of the filter is that these adjust to whatever's picked.
+  const totalSpend = rangeRows.filter((r) => r.amountCents > 0).reduce((s, r) => s + r.amountCents / 100, 0);
+  const personalTotal = personal.reduce((s, r) => s + r.amountCents / 100, 0);
+  const reimbursedTotal = reimbursed.reduce((s, r) => s + r.amountCents / 100, 0);
+  const rangeDescription = dateRangeLabel(rangePreset, rangeFrom, rangeTo);
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((r) => (cardFilter === "all" || cardKey(r) === cardFilter) && (!q || r.description.toLowerCase().includes(q)));
-  }, [rows, cardFilter, search]);
+    return rangeRows.filter((r) => (cardFilter === "all" || cardKey(r) === cardFilter) && (!q || r.description.toLowerCase().includes(q)));
+  }, [rangeRows, cardFilter, search]);
   const visibleRows = showAllRows ? filteredRows : filteredRows.slice(0, 60);
 
   const monthRows = useMemo(
-    () => (openedMonth ? rows.filter((r) => monthKey(r.date) === openedMonth).sort((a, b) => b.date.localeCompare(a.date)) : []),
-    [rows, openedMonth]
+    () => (openedMonth ? rangeRows.filter((r) => monthKey(r.date) === openedMonth).sort((a, b) => b.date.localeCompare(a.date)) : []),
+    [rangeRows, openedMonth]
   );
 
   const categoryDrilldownRows = useMemo(() => {
     if (!categoryDrilldown) return [];
-    const base = categoryDrilldown.source === "personal" ? personal : categoryDrilldown.source === "976" ? reimbursed : rows;
+    const base = categoryDrilldown.source === "personal" ? personal : categoryDrilldown.source === "976" ? reimbursed : rangeRows;
     return base.filter((r) => categoryDrilldown.names.includes(r.category)).sort((a, b) => b.date.localeCompare(a.date));
-  }, [categoryDrilldown, personal, reimbursed]);
+  }, [categoryDrilldown, personal, reimbursed, rangeRows]);
 
   const refresh = async () => {
     const fresh = await fetcher("/api/spending");
@@ -285,6 +297,37 @@ export function SpendingTab() {
             </button>
           </div>
         </div>
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: T.ink, fontFamily: mono, letterSpacing: "0.04em", textTransform: "uppercase" }}>Date range</span>
+          <select
+            value={rangePreset}
+            onChange={(e) => setRangePreset(e.target.value as DateRangePreset)}
+            style={{ fontFamily: mono, fontSize: 12, padding: "6px 9px", border: `1px solid ${T.line}`, borderRadius: 8, background: T.card, color: T.ink }}
+          >
+            {DATE_RANGE_PRESETS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+          {rangePreset === "custom" && (
+            <>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                style={{ fontFamily: mono, fontSize: 12, padding: "5px 9px", border: `1px solid ${T.line}`, borderRadius: 8, background: T.card, color: T.ink }}
+              />
+              <span style={{ color: T.ink, fontSize: 12 }}>–</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                style={{ fontFamily: mono, fontSize: 12, padding: "5px 9px", border: `1px solid ${T.line}`, borderRadius: 8, background: T.card, color: T.ink }}
+              />
+            </>
+          )}
+        </div>
         {uploadNote && (
           <div style={{ marginTop: 10, fontSize: 12, fontFamily: mono, color: uploadFailed ? T.loss : T.gain }}>{uploadNote}</div>
         )}
@@ -309,23 +352,27 @@ export function SpendingTab() {
         <Card style={{ marginTop: 16, fontSize: 13, color: T.ink }}>
           No spending yet — Brex syncs in via &ldquo;Sync now&rdquo; (Account menu), or upload a CSV export from a personal card.
         </Card>
+      ) : rangeRows.length === 0 ? (
+        <Card style={{ marginTop: 16, fontSize: 13, color: T.ink }}>
+          No transactions in {rangeDescription.toLowerCase()} — try a wider date range.
+        </Card>
       ) : (
         <>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
             <Card style={statStyle}>
-              <Eyebrow style={{ marginBottom: 6 }}>This month</Eyebrow>
-              <div style={{ fontFamily: serif, fontSize: "clamp(20px, 5vw, 26px)", fontWeight: 600 }}>{usd(thisMonthTotal)}</div>
-              <div style={{ fontSize: 11.5, color: T.ink, fontFamily: mono, marginTop: 4 }}>vs {usd(lastMonthTotal)} last month</div>
+              <Eyebrow style={{ marginBottom: 6 }}>Total spend</Eyebrow>
+              <div style={{ fontFamily: serif, fontSize: "clamp(20px, 5vw, 26px)", fontWeight: 600 }}>{usd(totalSpend)}</div>
+              <div style={{ fontSize: 11.5, color: T.ink, fontFamily: mono, marginTop: 4 }}>{rangeDescription}</div>
             </Card>
             <Card style={statStyle}>
-              <Eyebrow style={{ marginBottom: 6 }}>Personal spend · YTD</Eyebrow>
-              <div style={{ fontFamily: serif, fontSize: "clamp(20px, 5vw, 26px)", fontWeight: 600 }}>{usd(ytdTotal)}</div>
+              <Eyebrow style={{ marginBottom: 6 }}>Personal spend</Eyebrow>
+              <div style={{ fontFamily: serif, fontSize: "clamp(20px, 5vw, 26px)", fontWeight: 600 }}>{usd(personalTotal)}</div>
               <div style={{ fontSize: 11.5, color: T.ink, fontFamily: mono, marginTop: 4 }}>excludes 976 reimbursements</div>
             </Card>
             <Card style={statStyle}>
-              <Eyebrow style={{ marginBottom: 6 }}>976 spend · YTD</Eyebrow>
+              <Eyebrow style={{ marginBottom: 6 }}>976 spend</Eyebrow>
               <div style={{ fontFamily: serif, fontSize: "clamp(20px, 5vw, 26px)", fontWeight: 600, color: T.gain }}>
-                {usd(reimbursedYtd)}
+                {usd(reimbursedTotal)}
               </div>
               <div style={{ fontSize: 11.5, color: T.ink, fontFamily: mono, marginTop: 4 }}>Brex + reimbursed personal charges</div>
             </Card>

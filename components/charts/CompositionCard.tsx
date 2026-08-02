@@ -67,7 +67,14 @@ export function CompositionCard({
                   const x = cx + r * Math.cos(-midAngle * RADIAN);
                   const y = cy + r * Math.sin(-midAngle * RADIAN);
                   return (
-                    <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontFamily={mono} fontSize={10.5} fontWeight={600}>
+                    // pointerEvents: none — otherwise this label (dead center
+                    // of the slice, the most natural place to click) eats the
+                    // click before it reaches the Cell underneath, and
+                    // onSegmentClick silently never fires.
+                    <text
+                      x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central"
+                      fontFamily={mono} fontSize={10.5} fontWeight={600} style={{ pointerEvents: "none" }}
+                    >
                       {`${(percent * 100).toFixed(0)}%`}
                     </text>
                   );
