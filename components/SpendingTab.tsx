@@ -18,6 +18,7 @@ import {
   byCategory,
   detectRecurring,
   monthKey,
+  BUSINESS_EXPENSE_CATEGORIES,
   type SpendRow,
 } from "@/lib/spending";
 
@@ -106,6 +107,7 @@ export function SpendingTab() {
   const [showAllRows, setShowAllRows] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openedMonth, setOpenedMonth] = useState<string | null>(null);
+  const [categoryDrilldown, setCategoryDrilldown] = useState<{ title: string; source: "personal" | "976" | "all"; names: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const personal = useMemo(() => personalRows(rows), [rows]);
@@ -135,6 +137,15 @@ export function SpendingTab() {
   const categoryTotal = categories.reduce((s, c) => s + c.value, 0);
   const reimbursedCategories = useMemo(() => byCategory(reimbursed), [reimbursed]);
   const reimbursedCategoryTotal = reimbursedCategories.reduce((s, c) => s + c.value, 0);
+  // A narrow, deliberate whitelist of genuinely deductible business
+  // expenses — not "everything on the Brex card", which also includes
+  // dining, travel, and other spend that isn't itself a business expense
+  // just because it happened to run through 976.
+  const businessExpenses = useMemo(() => {
+    const all = byCategory(rows);
+    return BUSINESS_EXPENSE_CATEGORIES.map((name) => ({ name, value: all.find((c) => c.name === name)?.value ?? 0 }));
+  }, [rows]);
+  const businessExpenseTotal = businessExpenses.reduce((s, c) => s + c.value, 0);
   // Same merchant can be charged from either a personal card or the Brex
   // card (or both, at different times) — a subscription is a subscription
   // regardless of which one paid it, so this runs across every source.
@@ -176,6 +187,12 @@ export function SpendingTab() {
     () => (openedMonth ? rows.filter((r) => monthKey(r.date) === openedMonth).sort((a, b) => b.date.localeCompare(a.date)) : []),
     [rows, openedMonth]
   );
+
+  const categoryDrilldownRows = useMemo(() => {
+    if (!categoryDrilldown) return [];
+    const base = categoryDrilldown.source === "personal" ? personal : categoryDrilldown.source === "976" ? reimbursed : rows;
+    return base.filter((r) => categoryDrilldown.names.includes(r.category)).sort((a, b) => b.date.localeCompare(a.date));
+  }, [categoryDrilldown, personal, reimbursed]);
 
   const refresh = async () => {
     const fresh = await fetcher("/api/spending");
@@ -359,9 +376,49 @@ export function SpendingTab() {
             </div>
           </Card>
 
+          <Card style={{ marginTop: 16 }}>
+            <Eyebrow style={{ marginBottom: 4 }}>Business expenses</Eyebrow>
+            <div style={{ fontSize: 11.5, color: T.ink, marginBottom: 12 }}>
+              Health insurance, other insurance, Google, and Claude — the genuinely deductible slice of 976 spend,
+              not everything that happens to run through the Brex card.
+            </div>
+            <div style={{ fontFamily: serif, fontSize: "clamp(22px, 5.5vw, 28px)", fontWeight: 600, marginBottom: 14 }}>
+              {usd(businessExpenseTotal)}
+            </div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {businessExpenses.map((c) => (
+                <button
+                  key={c.name}
+                  onClick={() => setCategoryDrilldown({ title: c.name, source: "all", names: [c.name] })}
+                  style={{
+                    flex: "1 1 140px", padding: "10px 14px", borderRadius: 10, textAlign: "left",
+                    background: T.headerBg, border: `1px solid ${T.line}`, cursor: "pointer", fontFamily: "inherit", color: T.ink,
+                  }}
+                >
+                  <div style={{ fontSize: 11, color: T.ink }}>{c.name}</div>
+                  <div style={{ fontFamily: mono, fontSize: 15, fontWeight: 500, marginTop: 2, color: "unset" }}>{usd(c.value)}</div>
+                </button>
+              ))}
+            </div>
+          </Card>
+
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
-            <CompositionCard title="Personal by category" data={categories} total={categoryTotal} donut flex={1} />
-            <CompositionCard title="976 spend by category" data={reimbursedCategories} total={reimbursedCategoryTotal} donut flex={1} />
+            <CompositionCard
+              title="Personal by category"
+              data={categories}
+              total={categoryTotal}
+              donut
+              flex={1}
+              onSegmentClick={(name, names) => setCategoryDrilldown({ title: `Personal · ${name}`, source: "personal", names })}
+            />
+            <CompositionCard
+              title="976 spend by category"
+              data={reimbursedCategories}
+              total={reimbursedCategoryTotal}
+              donut
+              flex={1}
+              onSegmentClick={(name, names) => setCategoryDrilldown({ title: `976 · ${name}`, source: "976", names })}
+            />
           </div>
 
           <Card style={{ marginTop: 16 }}>
@@ -438,6 +495,17 @@ export function SpendingTab() {
         <Modal title={monthLabel(`${openedMonth}-01`)} onClose={() => setOpenedMonth(null)}>
           <div style={{ fontSize: 12.5, color: T.ink, marginTop: -8, marginBottom: 14 }}>{monthRows.length} transactions</div>
           {monthRows.map((r) => (
+            <TransactionRow key={r.id} row={r} dense onToggleReimbursed={toggleReimbursed} busy={busyId === r.id} />
+          ))}
+        </Modal>
+      )}
+
+      {categoryDrilldown && (
+        <Modal title={categoryDrilldown.title} onClose={() => setCategoryDrilldown(null)}>
+          <div style={{ fontSize: 12.5, color: T.ink, marginTop: -8, marginBottom: 14 }}>
+            {categoryDrilldownRows.length} transactions · {usd(categoryDrilldownRows.reduce((s, r) => s + r.amountCents / 100, 0))}
+          </div>
+          {categoryDrilldownRows.map((r) => (
             <TransactionRow key={r.id} row={r} dense onToggleReimbursed={toggleReimbursed} busy={busyId === r.id} />
           ))}
         </Modal>

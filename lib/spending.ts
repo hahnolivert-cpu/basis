@@ -84,8 +84,8 @@ export function parseCapitalOneCsv(text: string): ParsedSpendRow[] {
   for (const line of lines.slice(1)) {
     const cells = parseCsvLine(line);
     if (cells.every((c) => c.trim() === "")) continue;
-    const category = (cells[iCategory] ?? "").trim() || "Other";
-    if (NON_SPEND_CATEGORIES.has(category)) continue;
+    const bankCategory = (cells[iCategory] ?? "").trim() || "Other";
+    if (NON_SPEND_CATEGORIES.has(bankCategory)) continue;
 
     const debit = parseFloat(cells[iDebit] ?? "");
     const credit = parseFloat(cells[iCredit] ?? "");
@@ -94,6 +94,7 @@ export function parseCapitalOneCsv(text: string): ParsedSpendRow[] {
 
     const transactionDate = (cells[iDate] ?? "").trim();
     const description = (cells[iDesc] ?? "").trim();
+    const category = refineCategory(description, bankCategory);
     const cardLast4 = (cells[iCard] ?? "").trim();
     const dedupeKey = [cardLast4, transactionDate, description, cells[iDebit], cells[iCredit]].join("|");
     const occurrence = seen.get(dedupeKey) ?? 0;
@@ -145,6 +146,33 @@ const MCC_CATEGORY: Record<string, string> = {
 
 export function mccToCategory(mcc: string | null): string {
   return (mcc && MCC_CATEGORY[mcc]) || "Other";
+}
+
+// Genuine, clearly-deductible business expenses — a deliberately narrow
+// whitelist, not "everything charged to the Brex card" (which also
+// includes dining, travel, and other spend that happens to run through
+// 976 but isn't itself a business expense). Matched by merchant name
+// rather than MCC/bank category, since those bucket Anthem Blue Cross
+// with liability insurance ("Insurance") and Google/Claude with every
+// other SaaS tool ("Software") — too coarse to answer "what did the
+// business actually spend on X".
+export const BUSINESS_EXPENSE_CATEGORIES = ["Health Insurance", "Other Insurance", "Google", "Claude"] as const;
+
+const MERCHANT_CATEGORY_OVERRIDES: [RegExp, string][] = [
+  [/anthem/i, "Health Insurance"],
+  [/biberk|next\s*insur/i, "Other Insurance"],
+  [/google|gsuite|youtube/i, "Google"],
+  [/claude/i, "Claude"],
+];
+
+// Applied on top of whatever category the source already assigned
+// (Capital One's own CSV category column, or mccToCategory for Brex) —
+// a merchant-name match always wins, since it's more specific than either.
+export function refineCategory(description: string, fallbackCategory: string): string {
+  for (const [pattern, category] of MERCHANT_CATEGORY_OVERRIDES) {
+    if (pattern.test(description)) return category;
+  }
+  return fallbackCategory;
 }
 
 // Groups a description down to a stable merchant key for subscription

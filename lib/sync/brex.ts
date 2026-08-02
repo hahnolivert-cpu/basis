@@ -7,7 +7,7 @@ import {
   type BrexAccount,
   type BrexTxn,
 } from "@/lib/brex";
-import { mccToCategory } from "@/lib/spending";
+import { mccToCategory, refineCategory } from "@/lib/spending";
 
 // Every Brex card charge is inherently a 976 Capital expense — it's the
 // company card — so unlike a personal Capital One charge, it never needs the
@@ -199,7 +199,7 @@ export async function runBrexSync({ dryRun = false }: { dryRun?: boolean } = {})
     transaction_date: t.date,
     posted_date: t.date,
     description: t.description,
-    category: mccToCategory(t.mcc),
+    category: refineCategory(t.description, mccToCategory(t.mcc)),
     amount_cents: t.amountCents,
     reimbursed_by: BREX_REIMBURSED_BY,
     external_id: t.externalId,

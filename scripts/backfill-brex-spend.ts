@@ -10,7 +10,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { fetchBrexCardTransactions } from "../lib/brex";
-import { mccToCategory } from "../lib/spending";
+import { mccToCategory, refineCategory } from "../lib/spending";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -33,7 +33,7 @@ async function main() {
     transaction_date: t.date,
     posted_date: t.date,
     description: t.description,
-    category: mccToCategory(t.mcc),
+    category: refineCategory(t.description, mccToCategory(t.mcc)),
     amount_cents: t.amountCents,
     reimbursed_by: "976",
     external_id: t.externalId,
