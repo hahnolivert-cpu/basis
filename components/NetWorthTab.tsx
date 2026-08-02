@@ -106,6 +106,7 @@ export function NetWorthTab({
     .filter((h) => h.inc > 0)
     .sort((a, b) => b.inc - a.inc);
   const startNW = total - debts;
+  const [showAllIncome, setShowAllIncome] = useState(false);
   const [drilldown, setDrilldown] = useState<Drilldown | null>(null);
   const openDrilldown = (title: string, dim: Drilldown["dim"]) => (name: string, foldedNames: string[]) =>
     setDrilldown({ title: `${title} · ${name}`, dim, keys: foldedNames });
@@ -164,17 +165,23 @@ export function NetWorthTab({
           <Eyebrow>Est. dividends &amp; interest</Eyebrow>
           <div style={{ fontFamily: serif, fontSize: "clamp(24px, 6.5vw, 34px)", fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.ink, fontFamily: "inherit" }}> / yr</span></div>
           <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {usd(income / 12)} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
-          {incomeRows.slice(0, 10).map((h) => (
+          {(showAllIncome ? incomeRows : incomeRows.slice(0, 10)).map((h) => (
             <div key={h.sym + h.acct} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "8px 0", borderBottom: `1px solid ${T.line}` }}>
               <span>{h.sym} <span style={{ color: T.ink, fontFamily: mono, fontSize: 11 }}>{h.yld.toFixed(2)}%</span></span>
               <span style={{ fontFamily: mono }}>{usd(h.inc)}</span>
             </div>
           ))}
           {incomeRows.length > 10 && (
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "8px 0", color: T.ink }}>
-              <span>+ {incomeRows.length - 10} more</span>
-              <span style={{ fontFamily: mono }}>{usd(incomeRows.slice(10).reduce((s, h) => s + h.inc, 0))}</span>
-            </div>
+            <button
+              onClick={() => setShowAllIncome((s) => !s)}
+              style={{
+                display: "flex", justifyContent: "space-between", width: "100%", fontSize: 12.5, padding: "8px 0",
+                color: T.gain, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              <span>{showAllIncome ? "Show less ▴" : `+ ${incomeRows.length - 10} more ▾`}</span>
+              {!showAllIncome && <span style={{ fontFamily: mono }}>{usd(incomeRows.slice(10).reduce((s, h) => s + h.inc, 0))}</span>}
+            </button>
           )}
         </Card>
       </div>
