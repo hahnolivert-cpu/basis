@@ -37,7 +37,7 @@ export function AllocationHistoryCard({ rows }: { rows: WeeklyRow[] }) {
                 if (!active || !payload?.length) return null;
                 const r = payload[0].payload as WeeklyRow;
                 return (
-                  <div style={{ background: T.ink, color: "#fff", padding: "7px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
+                  <div style={{ background: T.tooltipBg, color: "#fff", padding: "7px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
                     <div style={{ marginBottom: 3 }}>{r.date}</div>
                     {BANDS.map(([k, label]) => (
                       <div key={k}>

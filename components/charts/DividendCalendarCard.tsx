@@ -47,7 +47,7 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
               onClick={() => projection[i].totalCents > 0 && openMonth(i)}
               style={{
                 border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px",
-                background: projection[i].totalCents > 0 ? "#EAF3EE" : T.card,
+                background: projection[i].totalCents > 0 ? T.tint : T.card,
                 cursor: projection[i].totalCents > 0 ? "pointer" : "default",
               }}
             >

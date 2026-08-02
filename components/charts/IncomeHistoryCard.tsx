@@ -43,7 +43,7 @@ export function IncomeHistoryCard() {
               <Tooltip
                 content={({ active, payload }) =>
                   active && payload?.length ? (
-                    <div style={{ background: T.ink, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
+                    <div style={{ background: T.tooltipBg, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
                       {payload[0].payload.label}: {usd(payload[0].payload.net)}
                       <div style={{ opacity: 0.7, marginTop: 2 }}>Click to view transactions</div>
                     </div>

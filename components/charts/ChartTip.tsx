@@ -19,7 +19,7 @@ export function ChartTip({
   if (!active || !payload?.length) return null;
   const p = payload[0];
   return (
-    <div style={{ background: T.ink, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
+    <div style={{ background: T.tooltipBg, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
       {p.name || p.payload.name || p.payload.m}: {usd(p.value)}
       {total ? ` · ${((p.value / total) * 100).toFixed(1)}%` : ""}
     </div>

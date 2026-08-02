@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider, themeBootstrapScript } from "@/lib/theme-context";
 
 // Body text AND headings use the system font stack, not a bundled webfont —
 // SF Pro is Apple's proprietary font and isn't on Google Fonts or licensed
@@ -24,8 +25,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={ibmPlexMono.variable}>
-      <body>{children}</body>
+    <html lang="en" className={ibmPlexMono.variable} suppressHydrationWarning>
+      <head>
+        {/* Sets data-theme from localStorage before first paint, so a saved
+            dark preference never flashes light on load. */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
+      <body suppressHydrationWarning>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

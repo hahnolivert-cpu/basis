@@ -45,7 +45,7 @@ export function MonthlyActivityCard() {
               <Tooltip
                 content={({ active, payload }) =>
                   active && payload?.length ? (
-                    <div style={{ background: T.ink, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
+                    <div style={{ background: T.tooltipBg, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
                       <div>{payload[0].payload.label}</div>
                       <div>Invested: {usd(payload[0].payload.invested)}</div>
                       <div>Sold: {usd(-payload[0].payload.sold)}</div>

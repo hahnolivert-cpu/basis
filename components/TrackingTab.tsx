@@ -57,7 +57,7 @@ function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?:
     <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, marginTop: 16, overflow: "hidden" }}>
       <div style={{ overflowX: "auto" }}>
         <div style={{ minWidth: 860 }}>
-          <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 20px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+          <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 20px", borderBottom: `1px solid ${T.line}`, background: T.headerBg }}>
             {COLS.map((c) => {
               const active = sort.key === c.key;
               return (
@@ -86,7 +86,7 @@ function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?:
                 borderBottom: `1px solid ${T.line}`, fontSize: 13,
                 // Auto rows sit on a faint tint so machine-written weeks are
                 // distinguishable from the imported spreadsheet history.
-                background: r.source === "auto" ? "#FAFCFA" : undefined,
+                background: r.source === "auto" ? T.subtleBg : undefined,
               }}
             >
               <div style={{ fontFamily: mono, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6 }}>

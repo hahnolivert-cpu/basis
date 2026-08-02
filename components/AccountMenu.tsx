@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { T, mono } from "@/lib/theme";
+import { useTheme } from "@/lib/theme-context";
 import { SyncButton } from "@/components/SyncButton";
+import { Toggle } from "@/components/ui";
 
 const itemStyle: React.CSSProperties = {
   display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 13, color: T.ink,
@@ -20,6 +22,7 @@ const itemStyle: React.CSSProperties = {
 export function AccountMenu({ statusText, onSignOut }: { statusText: string; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +60,13 @@ export function AccountMenu({ statusText, onSignOut }: { statusText: string; onS
           </a>
           <div style={{ ...itemStyle, cursor: "default" }} onClick={(e) => e.stopPropagation()}>
             <SyncButton />
+          </div>
+          <div
+            style={{ ...itemStyle, cursor: "default", borderTop: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>Dark mode</span>
+            <Toggle on={theme === "dark"} setOn={toggleTheme} label="" size="sm" />
           </div>
           <a href="/account" style={{ ...itemStyle, borderTop: `1px solid ${T.line}` }} onClick={() => setOpen(false)}>
             Account settings

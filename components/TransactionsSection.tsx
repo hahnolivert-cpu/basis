@@ -222,7 +222,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
         )}
         {isMobile ? (
           <>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: T.headerBg }}>
               <select
                 value={sort.key}
                 onChange={(e) => clickSort(e.target.value as SortKey)}
@@ -260,7 +260,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                           aria-hidden
                           style={{
                             display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            width: 18, height: 18, borderRadius: "50%", background: "#F4F7F5", color: T.inkSoft, fontSize: 9,
+                            width: 18, height: 18, borderRadius: "50%", background: T.headerBg, color: T.inkSoft, fontSize: 9,
                             transform: expanded ? "rotate(180deg)" : "none", transition: "transform 150ms ease",
                           }}
                         >
@@ -279,7 +279,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
                     </div>
                   </div>
                   {expanded && (
-                    <div style={{ padding: "0 14px 14px", borderBottom: `1px solid ${T.line}`, background: "#FAFCFA" }}>
+                    <div style={{ padding: "0 14px 14px", borderBottom: `1px solid ${T.line}`, background: T.subtleBg }}>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                         <div>
                           <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Qty</div>
@@ -332,7 +332,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
               );
             })}
             {sorted.length > 0 && (
-              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}` }}>
+              <div style={{ padding: "12px 14px", background: T.tint, borderTop: `2px solid ${T.gain}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Total ({sorted.length})</span>
                 </div>
@@ -356,7 +356,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
         ) : (
         <div style={{ overflowX: "auto" }}>
           <div style={{ minWidth: 950 }}>
-            <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+            <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: T.headerBg }}>
               {COLS.map((c) => {
                 const active = sort.key === c.key;
                 return (
@@ -414,7 +414,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
             ))}
 
             {sorted.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}`, fontSize: 13 }}>
+              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: T.tint, borderTop: `2px solid ${T.gain}`, fontSize: 13 }}>
                 <div style={{ gridColumn: "1 / 5" }}>Total ({sorted.length})</div>
                 <div />
                 <div />

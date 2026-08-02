@@ -62,7 +62,7 @@ export function CurrencyLensCard({ startNW, btcPx }: { startNW: number; btcPx: n
                 <Tooltip
                   formatter={(v, n) => [v, n]}
                   labelFormatter={(_, p) => p?.[0]?.payload?.date ?? ""}
-                  contentStyle={{ background: T.ink, border: "none", borderRadius: 6, fontFamily: mono, fontSize: 12 }}
+                  contentStyle={{ background: T.tooltipBg, border: "none", borderRadius: 6, fontFamily: mono, fontSize: 12 }}
                   labelStyle={{ color: "#fff" }}
                   itemStyle={{ color: "#fff" }}
                 />

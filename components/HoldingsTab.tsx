@@ -181,7 +181,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
                 <span style={{ fontSize: 12.5, color: T.ink }}>Gain shown</span>
-                <div style={{ display: "flex", background: "#F4F7F5", borderRadius: 999, padding: 3, gap: 2 }}>
+                <div style={{ display: "flex", background: T.headerBg, borderRadius: 999, padding: 3, gap: 2 }}>
                   {(["day", "total"] as const).map((m) => (
                     <button
                       key={m}
@@ -253,7 +253,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                           aria-hidden
                           style={{
                             display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            width: 18, height: 18, borderRadius: "50%", background: "#F4F7F5", color: T.inkSoft, fontSize: 9,
+                            width: 18, height: 18, borderRadius: "50%", background: T.headerBg, color: T.inkSoft, fontSize: 9,
                             transform: expanded ? "rotate(180deg)" : "none", transition: "transform 150ms ease",
                           }}
                         >
@@ -280,7 +280,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
                     </div>
                   </div>
                   {expanded && (
-                    <div style={{ padding: "0 14px 14px", borderBottom: `1px solid ${T.line}`, background: "#FAFCFA" }}>
+                    <div style={{ padding: "0 14px 14px", borderBottom: `1px solid ${T.line}`, background: T.subtleBg }}>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
                         <div>
                           <div style={{ fontSize: 9, color: T.inkSoft, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost basis</div>
@@ -317,7 +317,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
         ) : (
         <div style={{ overflowX: "auto" }}>
         <div style={{ minWidth: 720 }}>
-        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: T.headerBg }}>
           {COLS.map((c) => {
             const active = sort.key === c.key;
             return (
@@ -396,7 +396,7 @@ export function HoldingsTab({ holdings }: { holdings: Holding[] }) {
             style={{
               display: "grid", gridTemplateColumns: GRID, alignItems: "center", height: ROW_HEIGHT,
               padding: "0 16px", fontSize: 13, color: T.ink,
-              background: "#EAF3EE", borderTop: `2px solid ${T.gain}`,
+              background: T.tint, borderTop: `2px solid ${T.gain}`,
             }}
           >
             <div>Total ({counted.length})</div>

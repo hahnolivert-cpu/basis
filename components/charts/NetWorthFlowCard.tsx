@@ -97,7 +97,7 @@ function FlowNode({ nodes, x, y, width, height, index, payload }: SankeyNodeProp
     return (
       <g>
         <rect x={x} y={y} width={width} height={Math.max(height, 1)} fill={color} rx={2} />
-        <rect x={cx - pillWidth / 2} y={midY - 10} width={pillWidth} height={20} rx={5} fill="#fff" fillOpacity={0.96} stroke={T.line} />
+        <rect x={cx - pillWidth / 2} y={midY - 10} width={pillWidth} height={20} rx={5} fill={T.card} fillOpacity={0.96} stroke={T.line} />
         <text x={cx} y={midY} textAnchor="middle" dominantBaseline="middle" fontFamily={mono} fontSize={11} fill={T.ink}>
           {label}
         </text>

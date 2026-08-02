@@ -108,7 +108,7 @@ export function TrueExposureCard({ holdings, netWorth }: { holdings: MaybeFund[]
               cursor={{ fill: "rgba(14,91,67,0.06)" }}
               content={({ active, payload }) =>
                 active && payload?.length ? (
-                  <div style={{ background: T.ink, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
+                  <div style={{ background: T.tooltipBg, color: "#fff", padding: "6px 10px", borderRadius: 6, fontFamily: mono, fontSize: 12 }}>
                     {payload[0].payload.name}: {usd(payload[0].payload.total)} ({((payload[0].payload.total / netWorth) * 100).toFixed(1)}% of net worth) = direct{" "}
                     {usd(payload[0].payload.direct)} + via ETFs {usd(payload[0].payload.viaEtf)}
                   </div>

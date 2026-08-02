@@ -246,7 +246,7 @@ export function ScenarioTab({ startNW, holdings = [] }: { startNW: number; holdi
             const v = fvWithLumpSums(startNW, planMonthly, planReturn / 100, monthsTo(y), lumpSums);
             const hit = TARGETS.filter((t) => v >= t).pop();
             return (
-              <div key={y} style={{ flex: 1, minWidth: 130, border: `1px solid ${T.line}`, borderRadius: 8, padding: "12px 14px", background: "#FAFCFA" }}>
+              <div key={y} style={{ flex: 1, minWidth: 130, border: `1px solid ${T.line}`, borderRadius: 8, padding: "12px 14px", background: T.subtleBg }}>
                 <div style={{ fontSize: 11, letterSpacing: "0.1em", color: T.ink, textTransform: "uppercase" }}>{y}</div>
                 <div style={{ fontFamily: serif, fontSize: 23, fontWeight: 600, marginTop: 4 }}>{usdK(v)}</div>
                 {hit && <div style={{ fontSize: 11, fontFamily: mono, color: T.gain, marginTop: 3 }}>≥ {usdK(hit)} ✓</div>}

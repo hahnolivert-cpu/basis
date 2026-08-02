@@ -1,14 +1,37 @@
 // Design tokens — cool paper, ledger-green ink, serif display, mono numerals.
+//
+// Values are CSS var() references, not literal hex, so the whole app
+// retheme on the `data-theme` attribute lib/theme-context.tsx sets on
+// <html> — see app/globals.css for the light/dark values each one
+// resolves to. Every component reads colors through this object rather
+// than hardcoding hex, so light/dark stays a one-file concern.
 export const T = {
-  paper: "#F6F8F6",
-  card: "#FFFFFF",
-  ink: "#152019",
-  inkSoft: "#5C6B62",
-  line: "#E2E8E3",
-  ledger: "#0E5B43",
-  gain: "#0F8A5F",
-  loss: "#C43D31",
-  chart: ["#0E5B43", "#3E7C68", "#6E9D8D", "#2F4858", "#C09A5B", "#7A6C5D", "#A85D4A", "#9EBEB2"],
+  paper: "var(--paper)",
+  card: "var(--card)",
+  ink: "var(--ink)",
+  inkSoft: "var(--ink-soft)",
+  line: "var(--line)",
+  ledger: "var(--ledger)",
+  gain: "var(--gain)",
+  loss: "var(--loss)",
+  // Secondary surface tints for table headers, alt/detail rows, and
+  // highlighted totals rows.
+  headerBg: "var(--header-bg)",
+  subtleBg: "var(--subtle-bg)",
+  tint: "var(--tint)",
+  track: "var(--track)",
+  // Chart tooltip pills are always dark-on-light regardless of page theme.
+  tooltipBg: "var(--tooltip-bg)",
+  chart: [
+    "var(--chart-0)",
+    "var(--chart-1)",
+    "var(--chart-2)",
+    "var(--chart-3)",
+    "var(--chart-4)",
+    "var(--chart-5)",
+    "var(--chart-6)",
+    "var(--chart-7)",
+  ],
 } as const;
 
 export const mono = "var(--font-ibm-plex-mono), ui-monospace, monospace";

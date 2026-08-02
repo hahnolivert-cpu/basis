@@ -206,7 +206,7 @@ export function DividendsSection() {
         )}
         {isMobile ? (
           <>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${T.line}`, background: T.headerBg }}>
               <select
                 value={sort.key}
                 onChange={(e) => clickSort(e.target.value as SortKey)}
@@ -257,7 +257,7 @@ export function DividendsSection() {
               </div>
             ))}
             {sorted.length > 0 && (
-              <div style={{ padding: "12px 14px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}` }}>
+              <div style={{ padding: "12px 14px", background: T.tint, borderTop: `2px solid ${T.gain}` }}>
                 <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Total ({sorted.length})</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                   <div>
@@ -279,7 +279,7 @@ export function DividendsSection() {
         ) : (
         <div style={{ overflowX: "auto" }}>
           <div style={{ minWidth: 760 }}>
-            <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: "#F4F7F5" }}>
+            <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "0 16px", borderBottom: `1px solid ${T.line}`, background: T.headerBg }}>
               {COLS.map((c) => {
                 const active = sort.key === c.key;
                 return (
@@ -327,7 +327,7 @@ export function DividendsSection() {
             ))}
 
             {sorted.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: "#EAF3EE", borderTop: `2px solid ${T.gain}`, fontSize: 13 }}>
+              <div style={{ display: "grid", gridTemplateColumns: GRID, alignItems: "center", padding: "10px 16px", background: T.tint, borderTop: `2px solid ${T.gain}`, fontSize: 13 }}>
                 <div style={{ gridColumn: "1 / 4" }}>Total ({sorted.length})</div>
                 <div />
                 <div style={{ textAlign: "right", fontFamily: mono, color: T.gain }}>{usd(totalGross / 100)}</div>

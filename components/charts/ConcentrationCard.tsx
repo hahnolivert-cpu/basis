@@ -35,7 +35,7 @@ export function ConcentrationCard({
               <span style={{ fontWeight: 600 }}>{h.sym}</span>
               <span style={{ fontFamily: mono, color: T.ink }}>{usd(h.value)} · {((h.value / total) * 100).toFixed(1)}%</span>
             </div>
-            <div style={{ height: 7, background: "#EDF2EE", borderRadius: 4 }}>
+            <div style={{ height: 7, background: T.track, borderRadius: 4 }}>
               <div style={{ height: "100%", width: `${(h.value / total) * 100}%`, background: T.gain, borderRadius: 4 }} />
             </div>
           </div>

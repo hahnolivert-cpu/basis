@@ -6,30 +6,108 @@
   box-sizing: border-box;
 }
 
+/* Design tokens as CSS custom properties so the whole app can retheme at
+   runtime via the `data-theme` attribute on <html> — see lib/theme.ts,
+   which exposes these as the `T` object every component already reads
+   colors from, and lib/theme-context.tsx, which flips the attribute. */
+:root {
+  --paper: #f6f8f6;
+  --card: #ffffff;
+  --ink: #152019;
+  --ink-soft: #5c6b62;
+  --line: #e2e8e3;
+  --ledger: #0e5b43;
+  --gain: #0f8a5f;
+  --loss: #c43d31;
+
+  /* Secondary surface tints used for table headers, alt rows, and
+     highlighted/total rows — previously hardcoded per-component. */
+  --header-bg: #f4f7f5;
+  --subtle-bg: #fafcfa;
+  --tint: #eaf3ee;
+  --track: #edf2ee;
+
+  /* Chart tooltips are always a dark pill with light text regardless of
+     page theme, so this stays constant rather than tracking --ink. */
+  --tooltip-bg: #152019;
+
+  --chart-0: #0e5b43;
+  --chart-1: #3e7c68;
+  --chart-2: #6e9d8d;
+  --chart-3: #2f4858;
+  --chart-4: #c09a5b;
+  --chart-5: #7a6c5d;
+  --chart-6: #a85d4a;
+  --chart-7: #9ebeb2;
+
+  --selection: #0e5b4322;
+  --row-hover: #f2f6f3;
+  --row-alt-static: #f7f9f7;
+  --focus-ring: #0e5b4355;
+  --focus-solid: #0e5b43;
+}
+
+[data-theme="dark"] {
+  /* "Quiet luxury" dark palette — near-black background, existing brand
+     green as the accent, muted terracotta for losses instead of alarm
+     red. Card surfaces sit almost flush with the page (flat, borderless)
+     with separation coming from hairline borders, not boxes. */
+  --paper: #0a0c0a;
+  --card: #101310;
+  --ink: #f3f5f2;
+  --ink-soft: rgba(243, 245, 242, 0.55);
+  --line: rgba(243, 245, 242, 0.08);
+  --ledger: #22b573;
+  --gain: #22b573;
+  --loss: #e15d4f;
+
+  --header-bg: rgba(243, 245, 242, 0.05);
+  --subtle-bg: rgba(243, 245, 242, 0.03);
+  --tint: rgba(34, 181, 115, 0.12);
+  --track: rgba(243, 245, 242, 0.08);
+
+  --tooltip-bg: #152019;
+
+  --chart-0: #22b573;
+  --chart-1: #5fd39a;
+  --chart-2: #8fe0b8;
+  --chart-3: #6b8f9c;
+  --chart-4: #d1a35c;
+  --chart-5: #a68a72;
+  --chart-6: #c97a63;
+  --chart-7: #7fa89c;
+
+  --selection: rgba(34, 181, 115, 0.2);
+  --row-hover: rgba(243, 245, 242, 0.04);
+  --row-alt-static: rgba(243, 245, 242, 0.025);
+  --focus-ring: rgba(34, 181, 115, 0.35);
+  --focus-solid: #22b573;
+}
+
 html,
 body {
-  background: #f6f8f6;
+  background: var(--paper);
 }
 
 ::selection {
-  background: #0e5b4322;
+  background: var(--selection);
 }
 
 .row:hover {
-  background: #f2f6f3;
+  background: var(--row-hover);
 }
 
 .row-alt {
-  background: #f7f9f7;
+  background: var(--row-alt-static);
 }
 
 input:focus {
-  outline: 2px solid #0e5b4355;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
 button:focus-visible {
-  outline: 2px solid #0e5b43;
+  outline: 2px solid var(--focus-solid);
   outline-offset: 2px;
 }
 

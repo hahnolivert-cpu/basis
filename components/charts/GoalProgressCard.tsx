@@ -38,7 +38,7 @@ export function GoalProgressCard({ rows, angelValue = 0 }: { rows: WeeklyRow[]; 
                   )}
                 </span>
               </div>
-              <div style={{ height: 9, background: "#EDF2EE", borderRadius: 5, overflow: "hidden" }}>
+              <div style={{ height: 9, background: T.track, borderRadius: 5, overflow: "hidden" }}>
                 <div
                   style={{
                     height: "100%",

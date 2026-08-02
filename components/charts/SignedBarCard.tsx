@@ -47,7 +47,7 @@ export function SignedBarCard({
               >
                 {r.name}
               </div>
-              <div style={{ flex: 1, minWidth: 0, position: "relative", height: 14, background: "#F4F7F5", borderRadius: 3 }}>
+              <div style={{ flex: 1, minWidth: 0, position: "relative", height: 14, background: T.headerBg, borderRadius: 3 }}>
                 <div style={{ position: "absolute", top: 0, bottom: 0, left: `${zeroPct}%`, width: 1, background: T.line }} />
                 <div
                   style={{
