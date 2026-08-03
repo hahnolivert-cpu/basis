@@ -54,6 +54,62 @@ export function etaLabel(weeks: number, fromDate: string): string {
   return `~${span} · ${dateLabel}`;
 }
 
+export type PerformanceStat = { key: string; label: string; pct: number | null; amt: number | null; unavailable?: string };
+
+// Latest row with a date on or before `targetDate` — `rows` is ascending by
+// date (see app/api/weekly-snapshots), so the last match wins.
+function rowOnOrBefore(rows: WeeklyRow[], targetDate: string): WeeklyRow | null {
+  let found: WeeklyRow | null = null;
+  for (const r of rows) {
+    if (r.date <= targetDate) found = r;
+    else break;
+  }
+  return found;
+}
+
+// "2026-08-03" minus 30 days, in UTC so it can't slip a day depending on the
+// caller's timezone.
+function isoDaysAgo(from: Date, days: number): string {
+  const d = new Date(from);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+// Week/month/YTD/1Y/5Y change in gross portfolio value (crypto + equities +
+// cash — the same basis WeeklyTotalCard and GoalProgressCard already use,
+// not net of debts) versus the nearest weekly snapshot on or before each
+// lookback point. `currentTotal` should be on that same gross basis (i.e.
+// the caller folds in angelValue exactly like those two cards do) — this
+// function only does the date math. A period older than the earliest
+// snapshot (real history only goes back to whenever the spreadsheet import
+// started) comes back with `unavailable` set instead of a fabricated number
+// — there's no "Today" here since that's an intraday live figure, not a
+// snapshot comparison; the caller supplies it separately.
+export function computePerformance(rows: WeeklyRow[], currentTotal: number, asOf: Date = new Date()): PerformanceStat[] {
+  if (rows.length === 0) return [];
+  const earliestDate = rows[0].date;
+
+  const lookback = (key: string, label: string, targetDate: string): PerformanceStat => {
+    if (targetDate < earliestDate) {
+      return { key, label, pct: null, amt: null, unavailable: `history starts ${monthLabel(earliestDate)}` };
+    }
+    const base = rowOnOrBefore(rows, targetDate);
+    if (!base || base.total === 0) return { key, label, pct: null, amt: null, unavailable: "no data" };
+    const amt = currentTotal - base.total;
+    return { key, label, pct: (amt / base.total) * 100, amt };
+  };
+
+  const jan1 = `${asOf.getUTCFullYear()}-01-01`;
+
+  return [
+    lookback("week", "1W", isoDaysAgo(asOf, 7)),
+    lookback("month", "1M", isoDaysAgo(asOf, 30)),
+    lookback("ytd", "YTD", jan1),
+    lookback("1y", "1Y", isoDaysAgo(asOf, 365)),
+    lookback("5y", "5Y", isoDaysAgo(asOf, 365 * 5)),
+  ];
+}
+
 export function toRows(snapshots: WeeklySnapshot[]): WeeklyRow[] {
   return snapshots.map((s, i) => {
     const total = s.total_cents / 100;

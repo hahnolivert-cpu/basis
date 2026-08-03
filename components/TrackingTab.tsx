@@ -7,6 +7,7 @@ import { toRows, type WeeklyRow } from "@/lib/weekly";
 import { Card } from "@/components/ui";
 import { WeeklyTotalCard } from "@/components/charts/WeeklyTotalCard";
 import { GoalProgressCard } from "@/components/charts/GoalProgressCard";
+import { PerformanceCard } from "@/components/charts/PerformanceCard";
 import { AllocationHistoryCard } from "@/components/charts/AllocationHistoryCard";
 import { useWeeklySnapshots } from "@/lib/hooks/useWeeklySnapshots";
 import type { Holding } from "@/lib/types";
@@ -120,7 +121,17 @@ function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?:
   );
 }
 
-export function TrackingTab({ holdings = [] }: { holdings?: Holding[] }) {
+export function TrackingTab({
+  holdings = [],
+  dayPct = 0,
+  dayAmt = 0,
+  liveGrossTotal = 0,
+}: {
+  holdings?: Holding[];
+  dayPct?: number;
+  dayAmt?: number;
+  liveGrossTotal?: number;
+}) {
   const { data, isLoading } = useWeeklySnapshots();
   const rows = useMemo(() => toRows(data?.snapshots ?? []), [data]);
 
@@ -160,6 +171,7 @@ export function TrackingTab({ holdings = [] }: { holdings?: Holding[] }) {
 
   return (
     <div>
+      <PerformanceCard rows={rows} currentTotal={liveGrossTotal} todayPct={dayPct} todayAmt={dayAmt} />
       <WeeklyTotalCard rows={rows} angelValue={angelValue} />
       <GoalProgressCard rows={rows} angelValue={angelValue} />
       <AllocationHistoryCard rows={rows} />
