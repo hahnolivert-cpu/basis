@@ -9,6 +9,7 @@ export type WeeklyRow = {
   crypto: number;
   equities: number;
   cash: number;
+  investments: number;
   total: number;
   eur: number;
   btc: number;
@@ -75,17 +76,17 @@ function isoDaysAgo(from: Date, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Week/month/YTD/1Y/5Y change in gross portfolio value (crypto + equities +
-// cash — the same basis WeeklyTotalCard and GoalProgressCard already use,
-// not net of debts) versus the nearest weekly snapshot on or before each
-// lookback point. `currentTotal` should be on that same gross basis (i.e.
-// the caller folds in angelValue exactly like those two cards do) — this
-// function only does the date math. A period older than the earliest
-// snapshot (real history only goes back to whenever the spreadsheet import
-// started) comes back with `unavailable` set instead of a fabricated number
-// — there's no "Today" here since that's an intraday live figure, not a
-// snapshot comparison; the caller supplies it separately.
-export function computePerformance(rows: WeeklyRow[], currentTotal: number, asOf: Date = new Date()): PerformanceStat[] {
+// Week/month/YTD/1Y change in *investment* value (crypto + equities only —
+// deliberately excludes cash, so a deposit/withdrawal or a treasury sweep
+// doesn't read as investment performance) versus the nearest weekly
+// snapshot on or before each lookback point. `currentInvestments` should be
+// on that same crypto+equities basis — this function only does the date
+// math. A period older than the earliest snapshot (real history only goes
+// back to whenever the spreadsheet import started) comes back with
+// `unavailable` set instead of a fabricated number — there's no "Today"
+// here since that's an intraday live figure, not a snapshot comparison;
+// the caller supplies it separately.
+export function computePerformance(rows: WeeklyRow[], currentInvestments: number, asOf: Date = new Date()): PerformanceStat[] {
   if (rows.length === 0) return [];
   const earliestDate = rows[0].date;
 
@@ -94,9 +95,9 @@ export function computePerformance(rows: WeeklyRow[], currentTotal: number, asOf
       return { key, label, pct: null, amt: null, unavailable: `history starts ${monthLabel(earliestDate)}` };
     }
     const base = rowOnOrBefore(rows, targetDate);
-    if (!base || base.total === 0) return { key, label, pct: null, amt: null, unavailable: "no data" };
-    const amt = currentTotal - base.total;
-    return { key, label, pct: (amt / base.total) * 100, amt };
+    if (!base || base.investments === 0) return { key, label, pct: null, amt: null, unavailable: "no data" };
+    const amt = currentInvestments - base.investments;
+    return { key, label, pct: (amt / base.investments) * 100, amt };
   };
 
   const jan1 = `${asOf.getUTCFullYear()}-01-01`;
@@ -106,7 +107,6 @@ export function computePerformance(rows: WeeklyRow[], currentTotal: number, asOf
     lookback("month", "1M", isoDaysAgo(asOf, 30)),
     lookback("ytd", "YTD", jan1),
     lookback("1y", "1Y", isoDaysAgo(asOf, 365)),
-    lookback("5y", "5Y", isoDaysAgo(asOf, 365 * 5)),
   ];
 }
 
@@ -120,6 +120,7 @@ export function toRows(snapshots: WeeklySnapshot[]): WeeklyRow[] {
       crypto: s.crypto_cents / 100,
       equities: s.equities_cents / 100,
       cash: s.cash_cents / 100,
+      investments: (s.crypto_cents + s.equities_cents) / 100,
       total,
       eur: total * s.usd_to_eur,
       btc: total / s.btc_price_usd,

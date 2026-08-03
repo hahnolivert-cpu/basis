@@ -23,36 +23,38 @@ function Stat({ label, pct, amt, unavailable }: { label: string; pct: number | n
 }
 
 // Today is a live intraday figure (from quotes, computed by the caller) —
-// fundamentally not the same kind of number as week/month/YTD/1Y/5Y, which
-// are all comparisons against the weekly history (see computePerformance).
+// fundamentally not the same kind of number as week/month/YTD/1Y, which are
+// all comparisons against the weekly history (see computePerformance).
 // Mixing them in one row is still the right call: it's what "performance"
 // means colloquially, one glance across every horizon.
 //
-// `currentTotal` is deliberately the *live* gross total (crypto + equities
-// + cash, no Angel Investment — see app/page.tsx's liveGrossTotal), not the
-// latest weekly snapshot the way GoalProgressCard uses it — a performance
-// card should reflect what happened since a snapshot up through right now,
-// not just up through last Sunday. Angel investments are left out entirely
-// rather than folded in like GoalProgressCard does: they never had a
-// snapshot history to begin with, so if Strala's own toggle is on, adding
-// its value only to `currentTotal` (never to the historical base) would
-// read as a fake one-week +$750k jump the moment the toggle flips.
-export function PerformanceCard({ rows, currentTotal, todayPct, todayAmt }: { rows: WeeklyRow[]; currentTotal: number; todayPct: number; todayAmt: number }) {
-  const stats = computePerformance(rows, currentTotal);
+// `currentInvestments` is crypto + equities only, live, no cash and no
+// Angel Investment — cash moving (deposits, withdrawals, a treasury sweep)
+// isn't investment performance, and Angel investments never had a snapshot
+// history to compare against. It's also the *live* figure, not the latest
+// weekly snapshot the way GoalProgressCard uses it — this should reflect
+// what happened up through right now, not just through last Sunday.
+export function PerformanceCard({
+  rows,
+  currentInvestments,
+  todayPct,
+  todayAmt,
+}: {
+  rows: WeeklyRow[];
+  currentInvestments: number;
+  todayPct: number;
+  todayAmt: number;
+}) {
+  const stats = computePerformance(rows, currentInvestments);
 
   return (
-    <Card style={{ marginTop: 22 }}>
+    <Card style={{ marginTop: 16 }}>
       <Eyebrow>Performance</Eyebrow>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(84px, 1fr))", gap: 16 }}>
         <Stat label="Today" pct={todayPct} amt={todayAmt} />
         {stats.map((s) => (
           <Stat key={s.key} label={s.label} pct={s.pct} amt={s.amt} unavailable={s.unavailable} />
         ))}
-      </div>
-      <div style={{ fontSize: 11.5, color: T.ink, marginTop: 14 }}>
-        Right now vs. the nearest weekly close on or before each date — gross portfolio total (crypto + equities +
-        cash, not net of debts, and not counting Angel Investments), same basis as the chart and goals above. A dash
-        means history doesn&apos;t go back that far yet.
       </div>
     </Card>
   );

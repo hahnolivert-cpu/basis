@@ -49,13 +49,14 @@ export default function Home() {
   const netWorthHoldings = useMemo(() => holdings.filter((h) => h.includedInNetWorth !== false), [holdings]);
 
   const total = netWorthHoldings.reduce((s, h) => s + h.value, 0);
-  // The weekly snapshot history (weekly_snapshots) never had an
-  // Angel Investment bucket at all — it's not that Strala gets excluded, the
-  // column structurally doesn't exist there — so for a live figure to be
-  // comparable against that history (PerformanceCard's week/month/YTD/1Y/5Y),
-  // it needs the same exclusion, unlike `total` above which counts Strala
-  // when its own toggle is on.
-  const liveGrossTotal = netWorthHoldings.filter((h) => h.cls !== "Angel Investment").reduce((s, h) => s + h.value, 0);
+  // PerformanceCard tracks investment growth only — crypto + equities, not
+  // cash (a deposit/withdrawal isn't performance) and not Angel Investment
+  // (weekly_snapshots never had that bucket, so there's no history to
+  // compare it against) — same composition as WeeklyRow.investments.
+  const investmentHoldings = netWorthHoldings.filter((h) => h.cls === "Crypto" || h.cls === "Equities");
+  const liveInvestments = investmentHoldings.reduce((s, h) => s + h.value, 0);
+  const investDayAmt = investmentHoldings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
+  const investDayPct = investmentHoldings.length ? (investDayAmt / (liveInvestments - investDayAmt)) * 100 : 0;
   const dayAmt = netWorthHoldings.reduce((s, h) => s + (h.value * h.day) / 100, 0);
   const dayPct = (dayAmt / (total - dayAmt)) * 100;
   const debts = (liabilityData?.totalCents ?? 0) / 100;
@@ -199,7 +200,9 @@ export default function Home() {
           />
         )}
         {tab === "holdings" && <HoldingsTab holdings={holdings} />}
-        {tab === "tracking" && <TrackingTab holdings={holdings} dayPct={dayPct} dayAmt={dayAmt} liveGrossTotal={liveGrossTotal} />}
+        {tab === "tracking" && (
+          <TrackingTab holdings={holdings} investDayPct={investDayPct} investDayAmt={investDayAmt} liveInvestments={liveInvestments} />
+        )}
         {tab === "earnings" && <EarningsTab holdings={netWorthHoldings} />}
         {tab === "spending" && <SpendingTab />}
         {tab === "scenarios" && <ScenarioTab startNW={startNW} holdings={netWorthHoldings} />}
