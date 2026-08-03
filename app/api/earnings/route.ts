@@ -51,7 +51,11 @@ async function fetchEarningsCalendar(symbol: string, apiKey: string): Promise<{ 
   );
   const json = await res.json();
   if (!res.ok) throw new Error(`Finnhub calendar request failed (${res.status})`);
-  const next = (json.earningsCalendar ?? [])[0];
+  // Finnhub doesn't reliably return this sorted soonest-first — for MCD it
+  // came back with Q3 (Nov) ahead of the nearer Q2 (Aug) date, so a plain
+  // [0] silently picked the wrong quarter. Take the earliest date instead.
+  const entries: { date: string; epsEstimate: number | null; revenueEstimate: number | null }[] = json.earningsCalendar ?? [];
+  const next = entries.reduce<(typeof entries)[number] | null>((soonest, e) => (!soonest || e.date < soonest.date ? e : soonest), null);
   if (!next) return null;
   return { date: next.date, epsEstimate: next.epsEstimate ?? null, revenueEstimate: next.revenueEstimate ?? null };
 }
