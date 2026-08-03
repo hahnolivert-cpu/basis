@@ -1,6 +1,6 @@
 import type { WeeklySnapshot } from "./types";
 
-export const GOALS = [1e6, 3e6, 5e6];
+export const GOALS = [1e6, 3e6, 5e6, 1e7, 2e7];
 
 // A weekly row with dollars and derived figures for charts and the table.
 export type WeeklyRow = {
