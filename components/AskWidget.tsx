@@ -6,7 +6,13 @@ import { usePersistedState } from "@/lib/hooks/usePersistedState";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
-type PanelState = "closed" | "open" | "minimized";
+export type PanelState = "closed" | "open" | "minimized";
+
+// Shared with app/page.tsx, which reserves this much space on the right of
+// the main content when the desktop panel is open — otherwise the
+// position:fixed panel just sits on top of whatever content was already
+// there, rather than the page making room for it.
+export const ASK_PANEL_WIDTH = 400;
 
 const SUGGESTIONS = [
   "How's my net worth trending?",
@@ -32,13 +38,33 @@ function ChatIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function SparkleIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M10 2.5c.3 2.6 1.1 4.3 2.3 5.5S15 9.7 17.5 10c-2.6.3-4.3 1.1-5.5 2.3S10.3 15 10 17.5c-.3-2.6-1.1-4.3-2.3-5.5S5 10.3 2.5 10c2.6-.3 4.3-1.1 5.5-2.3S9.7 5 10 2.5Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function SendIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 16V4M10 4l-5 5M10 4l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // The round trigger sits in the header next to Account (present on every
 // tab), but the message state and the in-flight fetch live here at the top
 // level regardless of whether the panel is visually open — minimizing (or
 // just switching tabs, since this never unmounts) never drops an in-progress
 // streamed response the way conditionally mounting the conversation would.
-export function AskWidget() {
-  const [panel, setPanel] = useState<PanelState>("closed");
+// `panel` is controlled by the parent (app/page.tsx) rather than owned here,
+// so the page layout can react to it — see ASK_PANEL_WIDTH above.
+export function AskWidget({ panel, setPanel }: { panel: PanelState; setPanel: (p: PanelState | ((p: PanelState) => PanelState)) => void }) {
   const [messages, setMessages] = usePersistedState<ChatMessage[]>("assistant.messages", []);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -105,11 +131,23 @@ export function AskWidget() {
 
   const conversationBody = (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${T.line}`, flexShrink: 0 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, color: T.ink }}>Ask</div>
-          <div style={{ fontSize: 11.5, color: T.ink, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            Your real numbers, on tap
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${T.line}`, flexShrink: 0, gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <div
+            style={{
+              width: 30, height: 30, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(34,181,115,0.14)", color: T.gain,
+            }}
+          >
+            <SparkleIcon size={15} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Ascentic Assistant
+            </div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Your real numbers, on tap
+            </div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -174,7 +212,12 @@ export function AskWidget() {
                     {m.content}
                   </div>
                 ) : (
-                  <div style={{ maxWidth: "95%", fontSize: 13.5, lineHeight: 1.6, color: T.ink, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                  <div
+                    style={{
+                      maxWidth: "95%", fontSize: 13.5, lineHeight: 1.6, color: T.ink, whiteSpace: "pre-wrap", wordBreak: "break-word",
+                      background: T.headerBg, border: `1px solid ${T.line}`, borderRadius: "2px 14px 14px 14px", padding: "10px 13px",
+                    }}
+                  >
                     {m.content || (sending && i === messages.length - 1 ? <span style={{ color: T.inkSoft, fontFamily: mono }}>…</span> : null)}
                   </div>
                 )}
@@ -191,24 +234,25 @@ export function AskWidget() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask anything…"
+          placeholder="Ask about your portfolio…"
           rows={1}
           disabled={sending}
           style={{
             flex: 1, fontFamily: "inherit", fontSize: 13.5, padding: "9px 11px", resize: "none",
-            border: `1px solid ${T.line}`, borderRadius: 10, background: T.card, color: T.ink, maxHeight: 110,
+            border: `1px solid ${T.line}`, borderRadius: 999, background: T.card, color: T.ink, maxHeight: 110,
           }}
         />
         <button
           onClick={() => send(input)}
           disabled={sending || !input.trim()}
+          aria-label="Send"
           style={{
+            width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
             cursor: sending || !input.trim() ? "default" : "pointer", background: T.gain, color: "#fff", border: "none",
-            borderRadius: 10, padding: "9px 15px", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-            opacity: sending || !input.trim() ? 0.5 : 1, whiteSpace: "nowrap",
+            borderRadius: "50%", padding: 0, opacity: sending || !input.trim() ? 0.5 : 1,
           }}
         >
-          {sending ? "…" : "Send"}
+          {sending ? <span style={{ fontSize: 13, fontFamily: mono }}>…</span> : <SendIcon />}
         </button>
       </div>
       <div style={{ fontSize: 10.5, color: T.ink, fontFamily: mono, padding: "0 16px 12px", flexShrink: 0 }}>
@@ -235,7 +279,7 @@ export function AskWidget() {
       {panel === "open" && !isMobile && (
         <div
           style={{
-            position: "fixed", top: 0, right: 0, bottom: 0, width: "min(400px, 100vw)", zIndex: 200,
+            position: "fixed", top: 0, right: 0, bottom: 0, width: `min(${ASK_PANEL_WIDTH}px, 100vw)`, zIndex: 200,
             background: T.paper, borderLeft: `1px solid ${T.line}`, boxShadow: "-16px 0 32px rgba(0,0,0,0.18)",
             display: "flex", flexDirection: "column",
           }}
@@ -254,6 +298,9 @@ export function AskWidget() {
               boxShadow: "0 -12px 32px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column", overflow: "hidden",
             }}
           >
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 0", flexShrink: 0 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 999, background: T.line }} />
+            </div>
             {conversationBody}
           </div>
         </>

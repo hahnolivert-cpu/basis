@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonNoStore, safeMessage } from "@/lib/http";
 import { buildFinancialContext } from "@/lib/assistant/context";
+import { queryDatabaseTool, runDatabaseQuery } from "@/lib/assistant/tools";
 
 // Streams a plain-text response (not SSE) — the client reads the fetch body
 // as a stream and appends chunks as they arrive, same idea as ChatGPT's
@@ -9,13 +10,20 @@ import { buildFinancialContext } from "@/lib/assistant/context";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const SYSTEM_PREAMBLE = `You are the financial assistant embedded in Ascentic, Oliver's personal net worth and portfolio tracker. You can see his real financial data below — use it to answer questions about his net worth, holdings, spending, and portfolio composition. You can also discuss investment strategy, portfolio theory, and specific stocks/companies/markets using your own knowledge.
+const SYSTEM_PREAMBLE = `You are the financial assistant embedded in Ascentic, Oliver's personal net worth and portfolio tracker. You can see a snapshot of his real financial data below — use it to answer questions about his net worth, holdings, spending, and portfolio composition. You can also discuss investment strategy, portfolio theory, and specific stocks/companies/markets using your own knowledge.
+
+For anything the snapshot doesn't cover — a specific date range, a particular merchant, a symbol it didn't list, a total it didn't pre-compute — use the query_database tool instead of guessing or saying you don't have the data. It's read-only against his actual database (writes are rejected at the database level, so there's no risk in using it freely).
 
 You are not a licensed financial advisor. For decisions that turn on his specific tax situation, legal structure, or that a fiduciary should weigh in on, say so plainly and suggest he consult one — but don't caveat every response with a disclaimer, and don't refuse to discuss strategy, allocation, or analysis in general terms.
 
-Be direct and concise. Reference his actual numbers when relevant instead of speaking in generalities. If a question needs data this snapshot doesn't have (e.g. a specific past transaction), say so rather than guessing.`;
+Be direct and concise. Reference his actual numbers when relevant instead of speaking in generalities.`;
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
+
+// Bounds cost/latency on a runaway tool-calling loop — six round trips is
+// far more than any real question here needs (a query, maybe a follow-up
+// query to refine it, then the answer).
+const MAX_TOOL_ITERATIONS = 6;
 
 export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -52,16 +60,40 @@ export async function POST(request: NextRequest) {
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        const stream = anthropic.messages.stream({
-          model: "claude-opus-5",
-          max_tokens: 2048,
-          system: `${SYSTEM_PREAMBLE}\n\n${context}`,
-          messages,
-        });
-        stream.on("text", (delta) => controller.enqueue(encoder.encode(delta)));
-        const final = await stream.finalMessage();
-        if (final.stop_reason === "refusal") {
-          controller.enqueue(encoder.encode("I can't help with that one. Try rephrasing, or ask something else."));
+        const convo: Anthropic.MessageParam[] = messages.map((m) => ({ role: m.role, content: m.content }));
+
+        for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
+          const stream = anthropic.messages.stream({
+            model: "claude-opus-5",
+            max_tokens: 2048,
+            system: `${SYSTEM_PREAMBLE}\n\n${context}`,
+            tools: [queryDatabaseTool],
+            messages: convo,
+          });
+          stream.on("text", (delta) => controller.enqueue(encoder.encode(delta)));
+          const final = await stream.finalMessage();
+
+          if (final.stop_reason === "refusal") {
+            controller.enqueue(encoder.encode("I can't help with that one. Try rephrasing, or ask something else."));
+            break;
+          }
+          if (final.stop_reason !== "tool_use") break;
+
+          convo.push({ role: "assistant", content: final.content });
+          const toolUseBlocks = final.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+          const toolResults: Anthropic.ToolResultBlockParam[] = [];
+          for (const block of toolUseBlocks) {
+            const result =
+              block.name === "query_database"
+                ? await runDatabaseQuery((block.input as { sql?: string }).sql ?? "")
+                : "Unknown tool.";
+            toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
+          }
+          convo.push({ role: "user", content: toolResults });
+
+          if (iteration === MAX_TOOL_ITERATIONS - 1) {
+            controller.enqueue(encoder.encode("\n\n[Stopped after several queries — try narrowing the question.]"));
+          }
         }
         controller.close();
       } catch (e) {

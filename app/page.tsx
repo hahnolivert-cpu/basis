@@ -13,7 +13,7 @@ import { ScenarioTab } from "@/components/ScenarioTab";
 import { TrackingTab } from "@/components/TrackingTab";
 import { EarningsTab } from "@/components/EarningsTab";
 import { SpendingTab } from "@/components/SpendingTab";
-import { AskWidget } from "@/components/AskWidget";
+import { AskWidget, ASK_PANEL_WIDTH, type PanelState } from "@/components/AskWidget";
 import { AccountMenu } from "@/components/AccountMenu";
 import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
@@ -35,6 +35,7 @@ export default function Home() {
   const router = useRouter();
   const [tab, setTab] = usePersistedState("app.tab", "networth");
   const [lookThrough, setLookThrough] = useState(true);
+  const [askPanel, setAskPanel] = useState<PanelState>("closed");
   const isMobile = useIsMobile();
   const { data: quotes } = useQuotes();
   const { holdings } = useEnrichedHoldings();
@@ -66,9 +67,25 @@ export default function Home() {
     router.refresh();
   };
 
+  // The Ask panel is position:fixed over the right edge of the viewport, so
+  // without this the content underneath doesn't know to make room for it —
+  // marginLeft stays auto (soaks up the left side as usual) while
+  // marginRight is pinned past the panel's width, and maxWidth's existing
+  // cap naturally lets the content shrink on narrower desktop widths rather
+  // than overflow under the panel.
+  const desktopAskOpen = askPanel === "open" && !isMobile;
+
   return (
     <div style={{ minHeight: "100vh", background: T.paper, color: T.ink, fontFamily: sans, paddingBottom: 60 }}>
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "34px 24px 0" }}>
+      <div
+        style={{
+          maxWidth: 1080,
+          marginLeft: "auto",
+          marginRight: desktopAskOpen ? ASK_PANEL_WIDTH + 24 : "auto",
+          padding: "34px 24px 0",
+          transition: "margin-right 0.2s ease",
+        }}
+      >
         {(() => {
           const logo = (
             <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
@@ -109,7 +126,7 @@ export default function Home() {
             : "Screenshot data · Jul 28";
           const accountControls = (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <AskWidget />
+              <AskWidget panel={askPanel} setPanel={setAskPanel} />
               <AccountMenu statusText={statusText} onSignOut={handleSignOut} />
             </div>
           );
