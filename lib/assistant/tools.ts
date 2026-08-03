@@ -21,6 +21,7 @@ const SCHEMA = `- accounts(id, institution, name, portfolio['capital'|'personal'
 - earnings_cache(symbol, next_date, next_eps_estimate, next_revenue_estimate, history jsonb, updated_at)
 - weekly_snapshots(sunday_date, crypto_cents, equities_cents, cash_cents, total_cents, usd_to_eur, btc_price_usd, source['import'|'auto'], created_at) — weekly net worth history
 - card_spend(id, source, card_last4, transaction_date, posted_date, description, category, amount_cents, reimbursed_by, external_id, created_at) — personal + Brex card spending; amount_cents positive = purchase, negative = refund; reimbursed_by='976' means it counts toward 976 Capital, not personal, spending
+- assistant_realized_gains(id, account_id, institution, account_name, portfolio, symbol, sell_date, qty_sold, proceeds_cents, avg_cost_cents_per_unit, realized_gain_cents) — a VIEW, one row per real sell transaction, already lot-matched (average cost method) and with currency-pair noise (IBKR logs FX conversions like EUR.USD as type='sell' too) filtered out. Use this instead of computing realized gains yourself from transactions — matching each sell against its buys correctly needs this join, which is exactly what the view already does. realized_gain_cents is NULL, not 0, when a sell has no buy history to match against (e.g. a position predating this app's transaction history) — report that as "unknown cost basis," don't treat it as zero gain.
 
 All money columns are integer cents (divide by 100 for dollars). accounts.id joins holdings/snapshots/transactions.account_id.`;
 
