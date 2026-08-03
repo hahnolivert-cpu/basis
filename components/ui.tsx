@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { T, mono } from "@/lib/theme";
 import { sign, usd } from "@/lib/format";
 
@@ -47,6 +47,26 @@ export function Eyebrow({ children, style }: { children: ReactNode; style?: CSSP
 }
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  // Locking the background without compensating shifts every fixed-width
+  // layout a few pixels left the instant a modal opens (and back on close)
+  // — the vertical scrollbar disappears along with body scroll, so the
+  // viewport briefly gets wider. Padding the body by exactly that width
+  // keeps content still while the scrollbar is hidden.
+  useEffect(() => {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      const currentPaddingRight = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+      document.body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
+    }
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
+    };
+  }, []);
+
   return (
     <div
       onClick={onClose}

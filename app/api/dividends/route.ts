@@ -101,8 +101,14 @@ export async function GET() {
   // calls per symbol, so a request only backfills a few stale symbols at a
   // time (sequentially, not Promise.all) rather than bursting all of them —
   // the rest just fall back to the static value and pick up on a later poll.
+  // Rotate the starting point by the current minute rather than always
+  // slicing from the front: a symbol that keeps failing (rate limit, no
+  // Polygon coverage) would otherwise permanently occupy the front of the
+  // queue and starve every symbol behind it of a turn.
   const POLYGON_BATCH_SIZE = 2;
-  for (const dbSym of stale.slice(0, POLYGON_BATCH_SIZE)) {
+  const offset = stale.length ? Math.floor(Date.now() / 60_000) % stale.length : 0;
+  const batch = [...stale.slice(offset), ...stale.slice(0, offset)].slice(0, POLYGON_BATCH_SIZE);
+  for (const dbSym of batch) {
     const sym = polygonByDbSymbol.get(dbSym)!;
     try {
       const records = await fetchPolygonDividends(sym, apiKey);

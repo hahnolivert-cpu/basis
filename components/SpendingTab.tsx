@@ -155,6 +155,10 @@ export function SpendingTab() {
   const categoryTotal = categories.reduce((s, c) => s + c.value, 0);
   const reimbursedCategories = useMemo(() => byCategory(reimbursed), [reimbursed]);
   const reimbursedCategoryTotal = reimbursedCategories.reduce((s, c) => s + c.value, 0);
+  // Personal + 976 together — the two charts below split it apart, this one
+  // answers "where does all the money go" regardless of which card paid.
+  const allCategories = useMemo(() => byCategory(rangeRows), [rangeRows]);
+  const allCategoryTotal = allCategories.reduce((s, c) => s + c.value, 0);
   // A narrow, deliberate whitelist of genuinely deductible business
   // expenses — not "everything on the Brex card", which also includes
   // dining, travel, and other spend that isn't itself a business expense
@@ -450,6 +454,14 @@ export function SpendingTab() {
           </Card>
 
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 16 }}>
+            <CompositionCard
+              title="All spend by category"
+              data={allCategories}
+              total={allCategoryTotal}
+              donut
+              flex={1}
+              onSegmentClick={(name, names) => setCategoryDrilldown({ title: `All spend · ${name}`, source: "all", names })}
+            />
             <CompositionCard
               title="Personal by category"
               data={categories}

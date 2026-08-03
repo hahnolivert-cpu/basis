@@ -13,6 +13,7 @@ import { ScenarioTab } from "@/components/ScenarioTab";
 import { TrackingTab } from "@/components/TrackingTab";
 import { EarningsTab } from "@/components/EarningsTab";
 import { SpendingTab } from "@/components/SpendingTab";
+import { AskWidget } from "@/components/AskWidget";
 import { AccountMenu } from "@/components/AccountMenu";
 import { createClient } from "@/lib/supabase/client";
 import { useQuotes } from "@/lib/hooks/useQuotes";
@@ -106,7 +107,12 @@ export default function Home() {
           const statusText = quotes
             ? `Live · as of ${new Date(quotes.asOf).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
             : "Screenshot data · Jul 28";
-          const accountControls = <AccountMenu statusText={statusText} onSignOut={handleSignOut} />;
+          const accountControls = (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <AskWidget />
+              <AccountMenu statusText={statusText} onSignOut={handleSignOut} />
+            </div>
+          );
 
           // On mobile, the tabs get their own full-width row below the logo
           // — sharing a row with both the logo and the account controls left
