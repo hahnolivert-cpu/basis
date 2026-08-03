@@ -123,7 +123,13 @@ export async function GET() {
           );
       }
 
-      const perShare = records.reduce((s, r) => s + r.cash_amount, 0);
+      // Polygon includes dividends that have been declared but haven't gone
+      // ex yet — great for the expected-dividend calendar (cached above from
+      // the unfiltered `records`), but counting one here overstates trailing
+      // yield by a quarter that hasn't actually been paid.
+      const perShare = records
+        .filter((r) => r.ex_dividend_date && r.ex_dividend_date <= today)
+        .reduce((s, r) => s + r.cash_amount, 0);
       if (perShare <= 0) {
         yields[dbSym] = 0;
         if (supabase) await supabase.from("dividend_cache").upsert({ symbol: dbSym, yield_pct: 0, updated_at: today });
