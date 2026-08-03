@@ -123,14 +123,14 @@ function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?:
 
 export function TrackingTab({
   holdings = [],
-  investDayPct = 0,
-  investDayAmt = 0,
-  liveInvestments = 0,
+  dayPct = 0,
+  dayAmt = 0,
+  liveGrossTotal = 0,
 }: {
   holdings?: Holding[];
-  investDayPct?: number;
-  investDayAmt?: number;
-  liveInvestments?: number;
+  dayPct?: number;
+  dayAmt?: number;
+  liveGrossTotal?: number;
 }) {
   const { data, isLoading } = useWeeklySnapshots();
   const rows = useMemo(() => toRows(data?.snapshots ?? []), [data]);
@@ -172,7 +172,7 @@ export function TrackingTab({
   return (
     <div>
       <WeeklyTotalCard rows={rows} angelValue={angelValue} />
-      <PerformanceCard rows={rows} currentInvestments={liveInvestments} todayPct={investDayPct} todayAmt={investDayAmt} />
+      <PerformanceCard rows={rows} currentTotal={liveGrossTotal} todayPct={dayPct} todayAmt={dayAmt} />
       <GoalProgressCard rows={rows} angelValue={angelValue} />
       <AllocationHistoryCard rows={rows} />
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginTop: 30, marginBottom: 2 }}>Weekly detail</div>

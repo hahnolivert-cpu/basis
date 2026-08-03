@@ -28,28 +28,28 @@ function Stat({ label, pct, amt, unavailable }: { label: string; pct: number | n
 // Mixing them in one row is still the right call: it's what "performance"
 // means colloquially, one glance across every horizon.
 //
-// `currentInvestments` is crypto + equities only, live, no cash and no
-// Angel Investment — cash moving (deposits, withdrawals, a treasury sweep)
-// isn't investment performance, and Angel investments never had a snapshot
-// history to compare against. It's also the *live* figure, not the latest
-// weekly snapshot the way GoalProgressCard uses it — this should reflect
-// what happened up through right now, not just through last Sunday.
+// `currentTotal` is the live gross net worth (crypto + equities + cash, no
+// Angel Investment — weekly_snapshots never had that bucket, so there's no
+// history to compare it against), not net of debts — same basis as
+// WeeklyTotalCard and GoalProgressCard above. It's also the *live* figure,
+// not the latest weekly snapshot the way GoalProgressCard uses it — this
+// should reflect what happened up through right now, not just last Sunday.
 export function PerformanceCard({
   rows,
-  currentInvestments,
+  currentTotal,
   todayPct,
   todayAmt,
 }: {
   rows: WeeklyRow[];
-  currentInvestments: number;
+  currentTotal: number;
   todayPct: number;
   todayAmt: number;
 }) {
-  const stats = computePerformance(rows, currentInvestments);
+  const stats = computePerformance(rows, currentTotal);
 
   return (
     <Card style={{ marginTop: 16 }}>
-      <Eyebrow>Performance</Eyebrow>
+      <Eyebrow>Net Worth Performance</Eyebrow>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(84px, 1fr))", gap: 16 }}>
         <Stat label="Today" pct={todayPct} amt={todayAmt} />
         {stats.map((s) => (
