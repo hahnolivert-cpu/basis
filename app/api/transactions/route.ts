@@ -60,9 +60,18 @@ type PricedTrade = TradeRow & { symbol: string; qty: number; price_cents: number
 // 730-day transaction lookback) has no reliable basis to compare against, so
 // it — and the untracked position after it — reports null rather than a
 // number that quietly assumes a $0 cost basis.
+// IBKR logs currency conversions (EUR.USD, USD.CHF, ...) as ordinary
+// buy/sell transactions too, with `price_cents` holding an FX rate rather
+// than a per-share price — averaging that in as if it were a security would
+// produce a meaningless "gain" on the conversion itself. Recognized by
+// shape (three letters, a dot, three letters) rather than a hardcoded list,
+// so a new currency pair doesn't silently slip through uncaught.
+const CURRENCY_PAIR = /^[A-Z]{3}\.[A-Z]{3}$/;
+
 function realizedGains(trades: PricedTrade[]): Map<string, number | null> {
   const bySymbol = new Map<string, PricedTrade[]>();
   for (const t of trades) {
+    if (CURRENCY_PAIR.test(t.symbol)) continue;
     const arr = bySymbol.get(t.symbol) ?? [];
     arr.push(t);
     bySymbol.set(t.symbol, arr);

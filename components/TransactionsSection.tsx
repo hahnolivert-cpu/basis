@@ -6,6 +6,7 @@ import { usd, sign } from "@/lib/format";
 import { Card, Eyebrow, Delta } from "@/components/ui";
 import { formatTicker } from "@/lib/holdings";
 import { mergeBySym } from "@/lib/calc";
+import { RealizedGainsSummary } from "@/components/RealizedGainsSummary";
 import { useTransactions } from "@/lib/hooks/useTransactions";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
@@ -170,6 +171,8 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
   return (
     <div style={{ marginTop: 30 }}>
       <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 600, marginBottom: 14 }}>Transactions</div>
+
+      <RealizedGainsSummary transactions={enriched} />
 
       <Card style={{ marginBottom: 14 }}>
         <Eyebrow style={{ marginBottom: 10 }}>Filters</Eyebrow>
