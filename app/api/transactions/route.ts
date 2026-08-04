@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 type TradeRow = {
   id: string;
+  account_id: string;
   date: string;
   type: "buy" | "sell";
   symbol: string | null;
@@ -51,12 +52,17 @@ type PricedTrade = TradeRow & { symbol: string; qty: number; price_cents: number
 
 // Realized gain/loss per sell, by average cost basis — this app doesn't track
 // individual lots (no per-purchase lot IDs from any provider), so it can't do
-// real FIFO/specific-lot accounting. Instead, each symbol's trades are walked
-// oldest-first (merged across every account, same as holdings already merge
-// by symbol elsewhere), keeping a running (qty, total cost); a sell's gain is
-// its proceeds minus qty × that running average cost per share, and the
-// position's cost shrinks proportionally afterward. A sell for more than the
-// tracked qty (its cost basis predates this symbol's synced history, or the
+// real FIFO/specific-lot accounting. Instead, each (account, symbol)'s trades
+// are walked oldest-first, keeping a running (qty, total cost); a sell's gain
+// is its proceeds minus qty × that running average cost per share, and the
+// position's cost shrinks proportionally afterward. Scoped per *account*, not
+// just symbol — several symbols (V, MSFT, GOOGL, MSTR, BMNR, ...) are held in
+// both 976 Capital and Personal, and pooling their buys/sells together would
+// let a sell in one portfolio consume cost basis from a buy in the other,
+// silently misattributing gains/losses between them (confirmed: one MSTR
+// sell read as a +$1,433.81 gain pooled, vs. its real -$165.00 loss once
+// scoped to its own account). A sell for more than the tracked qty (its cost
+// basis predates this symbol's synced history in this account, or the
 // 730-day transaction lookback) has no reliable basis to compare against, so
 // it — and the untracked position after it — reports null rather than a
 // number that quietly assumes a $0 cost basis.
@@ -69,16 +75,17 @@ type PricedTrade = TradeRow & { symbol: string; qty: number; price_cents: number
 const CURRENCY_PAIR = /^[A-Z]{3}\.[A-Z]{3}$/;
 
 function realizedGains(trades: PricedTrade[]): Map<string, number | null> {
-  const bySymbol = new Map<string, PricedTrade[]>();
+  const byAccountSymbol = new Map<string, PricedTrade[]>();
   for (const t of trades) {
     if (CURRENCY_PAIR.test(t.symbol)) continue;
-    const arr = bySymbol.get(t.symbol) ?? [];
+    const key = `${t.account_id}::${t.symbol}`;
+    const arr = byAccountSymbol.get(key) ?? [];
     arr.push(t);
-    bySymbol.set(t.symbol, arr);
+    byAccountSymbol.set(key, arr);
   }
 
   const result = new Map<string, number | null>();
-  for (const symTrades of Array.from(bySymbol.values())) {
+  for (const symTrades of Array.from(byAccountSymbol.values())) {
     const ordered = [...symTrades].sort((a, b) => {
       if (a.date !== b.date) return a.date < b.date ? -1 : 1;
       // Same-day ties: buys before sells, so a same-day round trip still has
@@ -136,7 +143,7 @@ export async function GET() {
     const [{ data: tradesRaw, error: tradesErr }, { data: holdingsRaw, error: holdingsErr }] = await Promise.all([
       supabase
         .from("transactions")
-        .select("id, date, type, symbol, amount_cents, qty, price_cents, accounts(institution, portfolio)")
+        .select("id, account_id, date, type, symbol, amount_cents, qty, price_cents, accounts(institution, portfolio)")
         .in("type", ["buy", "sell"])
         .not("qty", "is", null)
         .not("price_cents", "is", null)
