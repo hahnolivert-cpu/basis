@@ -192,11 +192,26 @@ export async function GET() {
   for (const dbSym of stale.slice(0, BATCH_SIZE)) {
     const finnhubSym = finnhubByDbSymbol.get(dbSym)!;
     try {
-      const [next, rawHistory, polygonQuarters] = await Promise.all([
+      // Polygon revenue is best-effort but not swallowed silently — a failed
+      // call (rate limit is common here, since /api/dividends shares the same
+      // key) used to be caught into an empty array indistinguishable from "no
+      // revenue data exists," and the whole entry still got cached as
+      // checked-today, locking in blank revenue for every quarter until
+      // tomorrow. Now a Polygon failure is tracked separately (still run
+      // concurrently with the Finnhub calls) so the cache write below can be
+      // skipped, leaving the symbol stale for a retry on the next poll.
+      const [nextResult, rawHistoryResult, polygonResult] = await Promise.allSettled([
         fetchEarningsCalendar(finnhubSym, finnhubKey),
         fetchEarningsHistory(finnhubSym, finnhubKey),
-        polygonKey ? fetchPolygonQuarters(finnhubSym, polygonKey).catch(() => [] as PolygonQuarter[]) : Promise.resolve([] as PolygonQuarter[]),
+        polygonKey ? fetchPolygonQuarters(finnhubSym, polygonKey) : Promise.resolve([] as PolygonQuarter[]),
       ]);
+      if (nextResult.status === "rejected") throw nextResult.reason;
+      if (rawHistoryResult.status === "rejected") throw rawHistoryResult.reason;
+      const next = nextResult.value;
+      const rawHistory = rawHistoryResult.value;
+      const polygonFailed = polygonResult.status === "rejected";
+      const polygonQuarters = polygonResult.status === "fulfilled" ? polygonResult.value : [];
+      if (polygonFailed) errors.push(`Polygon: ${finnhubSym} revenue request failed — ${safeMessage(polygonResult.reason)}`);
       const history: EarningsQuarter[] = rawHistory.map((q) => {
         const current = polygonQuarters.find((pq) => pq.period === q.period);
         const priorYear = findPriorYearQuarter(polygonQuarters, q.period);
@@ -222,7 +237,7 @@ export async function GET() {
       // just never surfaced to the UI.
       const isEmpty = entry.nextDate === null && entry.history.length === 0;
       if (!isEmpty) bySymbol.set(dbSym, entry);
-      if (supabase) {
+      if (supabase && !polygonFailed) {
         await supabase.from("earnings_cache").upsert({
           symbol: dbSym,
           next_date: entry.nextDate,
