@@ -19,6 +19,7 @@ type AssetTypeFilter = "all" | "Stocks" | "ETFs" | "Crypto";
 type PerformanceFilter = "all" | "winners" | "losers";
 type RecurringFilter = "all" | "recurring" | "one-off";
 type TradeTypeFilter = "all" | "buy" | "sell";
+type PortfolioFilter = "all" | "capital" | "personal";
 
 type Row = TransactionRow & { currentPrice: number | null; currentValueCents: number | null; gainCents: number | null; gainPct: number | null };
 
@@ -75,6 +76,7 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
   const [performance, setPerformance] = usePersistedState<PerformanceFilter>("tx.performance", "all");
   const [recurring, setRecurring] = usePersistedState<RecurringFilter>("tx.recurring", "all");
   const [tradeType, setTradeType] = usePersistedState<TradeTypeFilter>("tx.tradeType", "all");
+  const [portfolio, setPortfolio] = usePersistedState<PortfolioFilter>("tx.portfolio", "all");
   const [sort, setSort] = usePersistedState<Sort>("tx.sort", { key: "date", dir: "desc" });
   const isMobile = useIsMobile();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -123,13 +125,14 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
         if (assetType !== "all" && bucketOf(t) !== assetType) return false;
         if (assetQuery && !`${t.symbol} ${t.name}`.toLowerCase().includes(assetQuery.toLowerCase())) return false;
         if (tradeType !== "all" && t.type !== tradeType) return false;
+        if (portfolio !== "all" && t.portfolio !== portfolio) return false;
         if (performance === "winners" && !(t.gainPct !== null && t.gainPct > 0)) return false;
         if (performance === "losers" && !(t.gainPct !== null && t.gainPct < 0)) return false;
         if (recurring === "recurring" && !t.isRecurring) return false;
         if (recurring === "one-off" && t.isRecurring) return false;
         return true;
       }),
-    [enriched, dateFrom, dateTo, assetType, assetQuery, tradeType, performance, recurring]
+    [enriched, dateFrom, dateTo, assetType, assetQuery, tradeType, portfolio, performance, recurring]
   );
 
   const sorted = useMemo(() => {
@@ -193,6 +196,11 @@ export function TransactionsSection({ holdings }: { holdings: Holding[] }) {
             <option value="all">Buys + sells</option>
             <option value="buy">Buys only</option>
             <option value="sell">Sells only</option>
+          </select>
+          <select value={portfolio} onChange={(e) => setPortfolio(e.target.value as PortfolioFilter)} style={inputStyle}>
+            <option value="all">976 Capital + Personal</option>
+            <option value="capital">976 Capital only</option>
+            <option value="personal">Personal only</option>
           </select>
           <input
             type="text"
