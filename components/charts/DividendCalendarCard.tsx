@@ -29,12 +29,20 @@ export function DividendCalendarCard({ holdings }: { holdings: Holding[] }) {
 
   const projection = useMemo(() => projectExpectedDividends(holdings, rows, schedule), [holdings, rows, schedule]);
   const hasAny = projection.some((m) => m.totalCents > 0);
+  const yearlyTotalCents = useMemo(() => projection.reduce((s, m) => s + m.totalCents, 0), [projection]);
 
   const [openedMonth, setOpenedMonth] = useState<number | null>(null);
 
   return (
     <Card style={{ flex: 1, minWidth: "min(320px, 100%)" }}>
-      <Eyebrow style={{ marginBottom: 4 }}>Dividend calendar · expected per month</Eyebrow>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "2px 10px", marginBottom: 4 }}>
+        <Eyebrow style={{ marginBottom: 0 }}>Dividend calendar · expected per month</Eyebrow>
+        {hasAny && (
+          <span style={{ fontSize: 11.5, color: T.ink, whiteSpace: "nowrap" }}>
+            Total yearly: <span style={{ fontFamily: mono, fontWeight: 600, color: T.ink }}>{usd(yearlyTotalCents / 100)}</span>
+          </span>
+        )}
+      </div>
       <div style={{ fontSize: 11.5, color: T.ink, marginBottom: 12 }}>
         Uses each symbol&apos;s real published dividend record where available, current position size applied.
       </div>
