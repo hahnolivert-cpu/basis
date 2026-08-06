@@ -9,6 +9,17 @@ import { getEarnings } from "@/lib/earnings";
 // covered by the auth middleware (see middleware.ts) — authenticates on
 // CRON_SECRET instead, same as the other cron routes.
 //
+// Scheduled at 00:05 UTC — shortly after the cache's own daily invalidation
+// boundary (lib/earnings.ts keys freshness on the UTC date), not at some
+// arbitrary "morning" time. The first version of this ran at 11:00 UTC,
+// which left an ~11-hour window every day (00:00–11:00 UTC) where the cache
+// was already stale for the new day but the cron hadn't fired yet — anyone
+// opening the tab in that window still hit the slow client-fallback path,
+// which is exactly the bug this was supposed to fix. A second run at 06:00
+// UTC acts as a safety net in case the first one only got partway through
+// (e.g. Polygon's rate limit was already under pressure from something
+// else right at 00:05).
+//
 // One invocation loops multiple batches rather than relying on multiple
 // scheduled firings, since Polygon's ~5 req/min free-tier limit (the
 // binding constraint — see lib/earnings.ts) needs real spacing between

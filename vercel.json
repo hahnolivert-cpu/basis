@@ -14,7 +14,11 @@
     },
     {
       "path": "/api/cron/earnings",
-      "schedule": "0 11 * * *"
+      "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/earnings",
+      "schedule": "0 6 * * *"
     }
   ]
 }
