@@ -26,19 +26,33 @@ export function monthLabel(date: string): string {
   return `${MONTHS[Number(m) - 1]} ${y.slice(2)}`;
 }
 
-// Weeks until `goal` is reached, projecting the trailing average *dollar*
-// change per week (not a compound growth rate) forward at a constant pace.
-// A $/week pace is more legible against a volatile, crypto-heavy portfolio
-// than a % growth rate, which can swing wildly week to week. Returns null
-// when there's nothing to project: too little history, or a flat/negative
-// trend — an ETA on a shrinking portfolio would be a fabricated number, not
-// just an optimistic one.
-export function weeksToGoal(rows: WeeklyRow[], goal: number): number | null {
+export type GoalProjectionMode = "amount" | "percent";
+
+// Weeks until `goal` is reached, projecting the trailing average pace
+// forward at a constant rate — either a *dollar* change per week (linear)
+// or a *percent* change per week (compounding). $/week is more legible
+// against a volatile, crypto-heavy portfolio than a % growth rate, which
+// can swing wildly week to week on a small base; % better reflects real
+// compounding once a portfolio is mostly invested rather than growing from
+// new deposits. Neither is strictly more correct, so both are offered
+// rather than picking one. Returns null when there's nothing to project:
+// too little history, a flat/negative trend, or (percent mode) a
+// non-positive starting value — an ETA on a shrinking portfolio would be a
+// fabricated number, not just an optimistic one.
+export function weeksToGoal(rows: WeeklyRow[], goal: number, mode: GoalProjectionMode = "amount"): number | null {
   if (rows.length < 2) return null;
   const first = rows[0].total;
   const latest = rows[rows.length - 1].total;
   if (latest >= goal) return 0;
   const weeks = rows.length - 1;
+
+  if (mode === "percent") {
+    if (first <= 0 || latest <= 0) return null;
+    const weeklyRate = Math.pow(latest / first, 1 / weeks) - 1;
+    if (weeklyRate <= 0) return null;
+    return Math.log(goal / latest) / Math.log(1 + weeklyRate);
+  }
+
   const avgWeeklyChange = (latest - first) / weeks;
   if (avgWeeklyChange <= 0) return null;
   return (goal - latest) / avgWeeklyChange;
