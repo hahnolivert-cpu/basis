@@ -31,8 +31,16 @@ async function fetchFinnhubQuote(symbol: string, apiKey: string): Promise<Quote 
 // Finnhub's free tier only covers stocks/ETFs — mutual funds (e.g. VFIAX,
 // DFIEX) 403. Yahoo's unofficial chart endpoint has no key and covers mutual
 // fund NAV, so it's the fallback whenever Finnhub has no quote.
+//
+// Share-class tickers need translating first: quoteRefFor() writes them
+// dot-style ("BRK.B", matching Finnhub's convention), but Yahoo's own
+// tickers use a hyphen ("BRK-B") — Yahoo 404s on the dotted form outright.
+// Without this, BRK.B had no working fallback at all: any time Finnhub
+// hiccuped for it specifically, its day/price quote just went stale, unlike
+// every other holding which could fall through to Yahoo.
 async function fetchYahooQuote(symbol: string): Promise<Quote | null> {
-  const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`, {
+  const yahooSymbol = symbol.replace(".", "-");
+  const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`, {
     headers: { "User-Agent": "Mozilla/5.0" },
     cache: "no-store",
   });
