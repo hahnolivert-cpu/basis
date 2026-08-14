@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { T, mono } from "@/lib/theme";
-import { sign, usd } from "@/lib/format";
+import { sign, usd, maskDigits } from "@/lib/format";
+import { usePrivacy } from "@/lib/privacy-context";
 
 // `stacked` forces the $ amount and the (%) onto their own lines. Without it,
 // the space between them is a normal line-break opportunity — whether a cell
@@ -8,19 +9,26 @@ import { sign, usd } from "@/lib/format";
 // the column, so a table of these ends up with rows misaligned against each
 // other for no visible reason. Opt-in rather than the default so it only
 // changes layouts that ask for it.
+//
+// The $ amount masks under the header's hide-amounts toggle; the % stays
+// visible — performance is fine to show at a glance, the dollar figure it's
+// measured against is the part worth hiding.
 export function Delta({ pct, amt, size = 13, weight, stacked }: { pct: number; amt: number; size?: number | string; weight?: number; stacked?: boolean }) {
+  const { hideAmounts } = usePrivacy();
   const color = pct >= 0 ? T.gain : T.loss;
+  const amtStr = sign(amt, usd(amt));
+  const shownAmt = hideAmounts ? maskDigits(amtStr) : amtStr;
   if (stacked) {
     return (
       <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1.4, color, fontFamily: mono, fontSize: size, fontWeight: weight }}>
-        <span>{sign(amt, usd(amt))}</span>
+        <span>{shownAmt}</span>
         <span style={{ opacity: 0.75 }}>({sign(pct, pct.toFixed(2))}%)</span>
       </span>
     );
   }
   return (
     <span style={{ color, fontFamily: mono, fontSize: size, fontWeight: weight }}>
-      {sign(amt, usd(amt))} <span style={{ opacity: 0.75 }}>({sign(pct, pct.toFixed(2))}%)</span>
+      {shownAmt} <span style={{ opacity: 0.75 }}>({sign(pct, pct.toFixed(2))}%)</span>
     </span>
   );
 }

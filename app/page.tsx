@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { T, mono, serif, sans } from "@/lib/theme";
-import { sign, usd } from "@/lib/format";
+import { sign, usd, maskDigits } from "@/lib/format";
 import { estIrr } from "@/lib/calc";
+import { usePrivacy } from "@/lib/privacy-context";
 
 import { Delta, Card, Eyebrow } from "@/components/ui";
 import { NetWorthTab } from "@/components/NetWorthTab";
@@ -31,11 +32,31 @@ const TABS: [string, string][] = [
   ["scenarios", "Scenario Planning"],
 ];
 
+function EyeIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6S1.5 10 1.5 10Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function EyeOffIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6S1.5 10 1.5 10Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3 3l14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const [tab, setTab] = usePersistedState("app.tab", "networth");
   const [lookThrough, setLookThrough] = useState(true);
   const [askPanel, setAskPanel] = useState<PanelState>("closed");
+  const { hideAmounts, toggleHideAmounts } = usePrivacy();
   const isMobile = useIsMobile();
   const { data: quotes } = useQuotes();
   const { holdings } = useEnrichedHoldings();
@@ -131,6 +152,18 @@ export default function Home() {
             : "Screenshot data · Jul 28";
           const accountControls = (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={toggleHideAmounts}
+                title={hideAmounts ? "Show amounts" : "Hide amounts"}
+                aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
+                style={{
+                  width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: hideAmounts ? T.gain : "none", color: hideAmounts ? "#fff" : T.inkSoft,
+                  border: `1px solid ${hideAmounts ? T.gain : T.line}`, cursor: "pointer", flexShrink: 0, padding: 0,
+                }}
+              >
+                {hideAmounts ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
               <AskWidget panel={askPanel} setPanel={setAskPanel} />
               <AccountMenu statusText={statusText} onSignOut={handleSignOut} />
             </div>
@@ -167,7 +200,7 @@ export default function Home() {
             <div>
               <Eyebrow style={{ marginBottom: 6 }}>Net worth</Eyebrow>
               <div style={{ fontFamily: serif, fontWeight: 600, fontSize: "clamp(26px, 7vw, 40px)", lineHeight: 1, letterSpacing: "-0.01em" }}>
-                {usd(startNW)}
+                {hideAmounts ? maskDigits(usd(startNW)) : usd(startNW)}
               </div>
             </div>
             {/* Equal-width columns (not organically sized to each label's

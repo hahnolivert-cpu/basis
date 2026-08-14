@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, themeBootstrapScript } from "@/lib/theme-context";
+import { PrivacyProvider } from "@/lib/privacy-context";
 
 // Body text AND headings use the system font stack, not a bundled webfont —
 // SF Pro is Apple's proprietary font and isn't on Google Fonts or licensed
@@ -32,7 +33,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
       <body suppressHydrationWarning>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <PrivacyProvider>{children}</PrivacyProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

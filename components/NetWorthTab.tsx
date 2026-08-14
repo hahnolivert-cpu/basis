@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from "recharts";
 import { T, mono, serif } from "@/lib/theme";
-import { sign, usd, usdK } from "@/lib/format";
+import { sign, usd, usdK, maskDigits } from "@/lib/format";
+import { usePrivacy } from "@/lib/privacy-context";
 import { aggregate, mergeBySym, positionsForSegment } from "@/lib/calc";
 
 import { formatTicker } from "@/lib/holdings";
@@ -42,6 +43,8 @@ export function NetWorthTab({
 }) {
   const isMobile = useIsMobile();
   const toggleSize = isMobile ? "sm" : "md";
+  const { hideAmounts } = usePrivacy();
+  const mask = (s: string) => (hideAmounts ? maskDigits(s) : s);
 
   const total = holdings.reduce((s, h) => s + h.value, 0);
   const capital = holdings.filter((h) => h.pf === "capital").reduce((s, h) => s + h.value, 0);
@@ -142,33 +145,33 @@ export function NetWorthTab({
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 3, background: c }} />{n}
               </span>
-              <span style={{ fontFamily: mono }}>{usd(v)} <span style={{ color: T.ink }}>· {((v / total) * 100).toFixed(1)}%</span></span>
+              <span style={{ fontFamily: mono }}>{mask(usd(v))} <span style={{ color: T.ink }}>· {((v / total) * 100).toFixed(1)}%</span></span>
             </div>
           ))}
           {liabilities.length > 0 &&
             liabilities.map((l) => (
               <div key={l.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 12, color: T.ink }}>
                 <span>{l.name}</span>
-                <span style={{ fontFamily: mono, color: T.loss }}>−{usd(l.amount_cents / 100).slice(1)}</span>
+                <span style={{ fontFamily: mono, color: T.loss }}>−{mask(usd(l.amount_cents / 100).slice(1))}</span>
               </div>
             ))}
           <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13.5, color: T.loss, fontWeight: liabilities.length > 1 ? 600 : 400 }}>
-            <span>Debts</span><span style={{ fontFamily: mono }}>−{usd(debts).slice(1)}</span>
+            <span>Debts</span><span style={{ fontFamily: mono }}>−{mask(usd(debts).slice(1))}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0 0", fontSize: 14, fontWeight: 600 }}>
-            <span>Net worth</span><span style={{ fontFamily: mono }}>{usd(total - debts)}</span>
+            <span>Net worth</span><span style={{ fontFamily: mono }}>{mask(usd(total - debts))}</span>
           </div>
         </Card>
 
         {/* Estimated income */}
         <Card style={{ flex: 1, minWidth: "min(280px, 100%)" }}>
           <Eyebrow>Est. dividends &amp; interest</Eyebrow>
-          <div style={{ fontFamily: serif, fontSize: "clamp(24px, 6.5vw, 34px)", fontWeight: 600 }}>{usd(income)}<span style={{ fontSize: 15, color: T.ink, fontFamily: "inherit" }}> / yr</span></div>
-          <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {usd(income / 12)} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
+          <div style={{ fontFamily: serif, fontSize: "clamp(24px, 6.5vw, 34px)", fontWeight: 600 }}>{mask(usd(income))}<span style={{ fontSize: 15, color: T.ink, fontFamily: "inherit" }}> / yr</span></div>
+          <div style={{ fontSize: 12.5, color: T.ink, fontFamily: mono, marginTop: 2, marginBottom: 12 }}>≈ {mask(usd(income / 12))} / mo · {((income / total) * 100).toFixed(2)}% blended yield</div>
           {(showAllIncome ? incomeRows : incomeRows.slice(0, 10)).map((h) => (
             <div key={h.sym + h.acct} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "8px 0", borderBottom: `1px solid ${T.line}` }}>
               <span>{h.sym} <span style={{ color: T.ink, fontFamily: mono, fontSize: 11 }}>{h.yld.toFixed(2)}%</span></span>
-              <span style={{ fontFamily: mono }}>{usd(h.inc)}</span>
+              <span style={{ fontFamily: mono }}>{mask(usd(h.inc))}</span>
             </div>
           ))}
           {incomeRows.length > 10 && (
