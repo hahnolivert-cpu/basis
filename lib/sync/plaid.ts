@@ -215,7 +215,13 @@ async function planForItem(supabase: Supabase, item: ItemRow): Promise<PlaidInst
         updated_at: now,
       });
     }
-    if (marginCents > 0) liabilities.push({ name: `${item.institution} margin balance`, amount_cents: marginCents });
+    // Always written, even at $0 — same reasoning as credit balances above.
+    // A conditional `if (marginCents > 0)` here means paying off margin debt
+    // makes it vanish from this run's plan entirely, and the write loop below
+    // only ever updates liabilities that ARE in the plan, so the stale
+    // negative-margin row would sit untouched in the table forever instead
+    // of correcting to $0.
+    liabilities.push({ name: `${item.institution} margin balance`, amount_cents: marginCents });
 
     // Purchase history, used to infer a recurring-contribution rate for
     // scenario planning. Kept in its own try/catch so a transactions-specific
