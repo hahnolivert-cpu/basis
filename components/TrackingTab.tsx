@@ -33,8 +33,9 @@ function WeeklyTable({ rows, angelValue = 0 }: { rows: WeeklyRow[]; angelValue?:
   const [sort, setSort] = useState<Sort>({ key: "date", dir: "desc" });
 
   // totalInclStrala isn't part of the stored weekly series (see TrackingTab
-  // for why) — it's derived live from today's Strala value, same figure on
-  // every row, folded in here just so the column can sort like any other.
+  // for why) — it's derived live from today's Strala value (always, ignoring
+  // the "in net worth" toggle — see angelValueAlways in TrackingTab), same
+  // figure on every row, folded in here just so the column can sort like any other.
   const withStrala = useMemo(() => rows.map((r) => ({ ...r, totalInclStrala: r.total + angelValue })), [rows, angelValue]);
 
   const sorted = useMemo(() => {
@@ -146,6 +147,16 @@ export function TrackingTab({
     [holdings]
   );
 
+  // The table's own "$ Value incl. Strala" column is a standing what-if
+  // figure, not a live net-worth total — unlike angelValue above, it should
+  // always fold Strala in regardless of that holding's own "in net worth"
+  // toggle, so it doesn't silently collapse to equal the Total column
+  // whenever the toggle happens to be off.
+  const angelValueAlways = useMemo(
+    () => holdings.filter((h) => h.cls === "Angel Investment").reduce((s, h) => s + h.value, 0),
+    [holdings]
+  );
+
   if (isLoading) {
     return (
       <Card style={{ marginTop: 22 }}>
@@ -180,7 +191,7 @@ export function TrackingTab({
         {rows.length} weeks · {rows.length - autoCount} imported, {autoCount} recorded automatically. EUR and BTC totals
         use each week&apos;s own historical rate.
       </div>
-      <WeeklyTable rows={rows} angelValue={angelValue} />
+      <WeeklyTable rows={rows} angelValue={angelValueAlways} />
     </div>
   );
 }
