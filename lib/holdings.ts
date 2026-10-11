@@ -106,15 +106,14 @@ export function underlyingSymbol(symbol: string): string {
 // checking (Chase, Robinhood, Brex's own checking) is left alone since it's
 // genuinely non-interest-bearing, not a data gap.
 //
-// Brex Treasury: published base 7-day yield on the DGVXX sweep, effective
-// 2026-07-30 — https://www.brex.com/product/cash-management-account/rates-fees.
-// Excludes Brex's balance-based bonus (0–0.35% on top) since eligibility
-// isn't visible to us; better to understate than assume a tier we can't see.
+// Brex Treasury: 3.61% as reported by the account owner on 2026-10-10
+// (previously the published base 7-day yield on the DGVXX sweep, 3.4% as of
+// 2026-07-30 — https://www.brex.com/product/cash-management-account/rates-fees).
 // Brex's API reports these payouts as DIVIDEND transactions but never the
 // rate itself, so this is a hand-maintained snapshot, not a live pull —
-// it drifts whenever Brex changes the published rate and needs updating here.
+// it drifts whenever Brex changes the rate and needs updating here.
 const CASH_APY_ESTIMATE: Record<string, number> = {
-  Treasury: 3.4,
+  Treasury: 3.61,
 };
 
 // IBKR pays credit interest only on USD cash above the first $10k, at 4.33%
